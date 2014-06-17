@@ -15,8 +15,24 @@ get.fsl = function(){
                   "FSLOUTPUTTYPE=", fslout, "; export FSLOUTPUTTYPE; ", 
                   "$FSLDIR/bin/")
   } 
-  if (fsldir %in% "" | is.null(fsldir)) stop("Can't find FSL")
+  if (is.null(fsldir)) stop("Can't find FSL")
+  if (fsldir %in% "") stop("Can't find FSL")
   return(cmd)
+}
+
+
+#' @name Get FSLDir
+#' @title Get FSL's Directory 
+#' @description Finds the FSLDIR from system environment or \code{getOption("fsl.path")}
+#' for location of FSL fuctions and returns it
+#' @return Character path
+#' @export
+fsldir = function(){
+  fsldir = Sys.getenv("FSLDIR")
+  if (fsldir == "") {
+    fsldir = getOption("fsl.path")
+  }
+  return(fsldir)
 }
 
 #' @title Logical check if FSL is accessible
@@ -44,12 +60,14 @@ get.fsloutput = function(){
     fslout = getOption("fsl.outputtype")
   } 
   if (is.null(fslout)) {
-    warning("Can't find FSLOUTPUTTYPE, going with NIFTI_GZ")
+    warning("Can't find FSLOUTPUTTYPE, setting to NIFTI_GZ")
     fslout = "NIFTI_GZ"
+    options(fsl.outputtype = "NIFTI_GZ")
   }
   if (fslout == "") {
-    warning("Can't find FSLOUTPUTTYPE, going with NIFTI_GZ")
+    warning("Can't find FSLOUTPUTTYPE, setting to NIFTI_GZ")
     fslout = "NIFTI_GZ"
+    options(fsl.outputtype = "NIFTI_GZ")
   } 
   return(fslout)
 }
@@ -73,7 +91,7 @@ get.imgext = function(){
 
 
 #' @title Create temporary nii.gz file for FSL
-#' @description Takes in a object of class nifit, writes it to a temp file, appends
+#' @description Takes in a object of class nifti, writes it to a temp file, appends
 #' .nii.gz as \code{\link{writeNIfTI}} adds it.
 #' @param nim object of class nifti
 #' @return filename of output nii.gz
@@ -109,7 +127,7 @@ checkimg = function(file){
 #' @description This function calls \code{fslmaths}'s help
 #' @return Prints help output and returns output as character vector
 #' @aliases fslsmooth.help fslmask.help fslerode.help fslfill.help 
-#' fslsub2.help fslthresh.help
+#' fslsub2.help fslthresh.help fslbin.help
 #' @export
 #' @examples
 #' if (have.fsl()){
@@ -139,7 +157,7 @@ fslstats.help = function(){
 
 #' @title FSL Maths 
 #' @description This function calls \code{fslmaths}
-#' @param file (character) image to be smoothed
+#' @param file (character) image to be manipulated
 #' @param outfile (character) resultant image name (optional)
 #' @param retimg (logical) return image of class nifti
 #' @param reorient (logical) If retimg, should file be reoriented when read in?
@@ -147,7 +165,7 @@ fslstats.help = function(){
 #' @param intern (logical) to be passed to \code{\link{system}}
 #' @param opts (character) operations to be passed to \code{fslmaths}
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
-#' @return If \code{retimg} then object of class nifit.  Otherwise,
+#' @return If \code{retimg} then object of class nifti.  Otherwise,
 #' Result from system command, depends if intern is TRUE or FALSE.
 #' @export
 fslmaths = function(
@@ -182,6 +200,39 @@ fslmaths = function(
   
   return(res)  
 }
+
+
+#' @title Binarize Image using FSL 
+#' @description This function calls \code{fslmaths -bin}.  The R functions wraps
+#' \code{fslmaths}
+#' @param file (character) image to be binarized
+#' @param outfile (character) resultant image name (optional)
+#' @param retimg (logical) return image of class nifti
+#' @param reorient (logical) If retimg, should file be reoriented when read in?
+#' Passed to \code{\link{readNIfTI}}.
+#' @param intern (logical) to be passed to \code{\link{system}}
+#' @param opts (character) operations to be passed to \code{fslmaths}
+#' @param ... additional arguments passed to \code{\link{readNIfTI}}.
+#' @return If \code{retimg} then object of class nifti.  Otherwise,
+#' Result from system command, depends if intern is TRUE or FALSE.
+#' @export
+fslbin = function(
+  file,
+  outfile=NULL, 
+  retimg = FALSE,
+  reorient = FALSE,
+  intern=TRUE, 
+  opts = "", 
+  ...){
+  
+  all.opts = paste("-bin ", opts, collapse=" " )
+  res = fslmaths(file=file, outfile=outfile, 
+           retimg=retimg, reorient=reorient,
+           intern=intern, opts = all.opts, ...)
+  
+  return(res)  
+}
+
 
 
 
@@ -336,7 +387,8 @@ fslmask <- function(file, mask, outfile=NULL,
   }
   outfile = nii.stub(outfile)
   file = checkimg(file)
-	cmd <- paste0(cmd, sprintf('fslmaths "%s" -mas "%s" %s "%s"', 
+  mask = checkimg(mask)
+  cmd <- paste0(cmd, sprintf('fslmaths "%s" -mas "%s" %s "%s"', 
 		file, mask, opts, outfile))
 	res = system(cmd, intern=intern)
   ext = get.imgext()
@@ -408,10 +460,32 @@ fslerode <- function(file, outfile=NULL,
 
 
 
+#' @title Get value from FSL header
+#' @description This function calls \code{fslval} to obtain a nifti header 
+#' @param file (character) image filename or character of class nifti
+#' @param keyword (character) keyword to be taken from fslhd
+#' @return Character of infromation from fslhd field specified in keyword
+#' @export
+#' @import stringr
+fslval <- function(file, keyword = ""){
+  cmd <- get.fsl()
+  file = checkimg(file)
+  cmd <- paste0(cmd, sprintf('fslval "%s" %s', file, keyword))
+  return(str_trim(system(cmd, intern=TRUE)))
+}
+
+#' @title fslval help
+#' @description This function calls \code{fslval}'s help
+#' @return Prints help output and returns output as character vector
+#' @export
+fslval.help = function(){
+  return(fslhelp("fslval", help.arg=""))
+}
+
 
 #' @title Get NIfTI header using FSL
 #' @description This function calls \code{fslhd} to obtain a nifti header 
-#' @param file (character) image to be masked
+#' @param file (character) image filename or character of class nifti
 #' @param opts (character) additional options to be passed to fslhd
 #' @return Character of infromation from fslhd
 #' @export
@@ -740,7 +814,7 @@ fslsub2 = function(file,
 fslview = function(file, intern=TRUE, opts =""){
   cmd <- get.fsl()
   file = checkimg(file)
-  cmd <- paste(cmd, sprintf('fslview "%s" %s', file, opts))
+  cmd <- paste0(cmd, sprintf('fslview "%s" %s', file, opts))
   res = system(cmd, intern=intern)
   return(res)
 }
@@ -917,9 +991,69 @@ melodic.help = function(){
 #' @return Prints help output and returns output as character vector
 #' @export
 fslhelp = function(func_name, help.arg = "--help",extra.args = ""){
-    get.fsl()
-    args = paste(help.arg, extra.args, sep=" ", collapse = " ")
-    res = system2(func_name, args = args, stdout=TRUE, stderr=TRUE)  
+    cmd = get.fsl()
+    cmd <- paste0(cmd, sprintf('%s %s %s', func_name, 
+                               help.arg, extra.args))
+#     args = paste(help.arg, extra.args, sep=" ", collapse = " ")
+    res = system(cmd, intern=TRUE)    
+#     res = system2(func_name, args = args, stdout=TRUE, stderr=TRUE)
     cat(res, sep="\n")
     return(invisible(res))
+}
+
+
+
+#' @title Use FSL's Brain Extraction Tool (BET)
+#' @description This function calls \code{bet} to extract a brain 
+#' from an image, usually for skull stripping.
+#' @param infile (character) input filename
+#' @param outfile (character) output filename
+#' @param retimg (logical) return image of class nifti
+#' @param reorient (logical) If retimg, should file be reoriented when read in?
+#' Passed to \code{\link{readNIfTI}}. 
+#' @param intern (logical) pass to \code{\link{system}}
+#' @param opts (character) additional options to FLIRT
+#' @param betcmd (character) Use \code{bet} or \code{bet2} function
+#' @param ... additional arguments passed to \code{\link{readNIfTI}}.
+#' @return character or logical depending on intern
+#' @export
+fslbet = function(infile, 
+                 outfile = NULL,                  
+                 retimg = FALSE,
+                 reorient = FALSE,                 
+                 intern=TRUE,
+                 opts="", 
+                 betcmd = c("bet2", "bet"),
+                 ...){
+  betcmd = match.arg( betcmd )
+  cmd <- get.fsl()
+  if (retimg){
+    if (is.null(outfile)) {
+      outfile = tempfile()
+    }
+  } else {
+    stopifnot(!is.null(outfile))
+  }
+  infile = checkimg(infile)  
+  outfile = checkimg(outfile)  
+  outfile = nii.stub(outfile)
+  
+  cmd <- paste0(cmd, sprintf('%s "%s" "%s" %s', 
+                             betcmd, infile, outfile, opts))
+  res = system(cmd, intern=intern)
+  ext = get.imgext()
+  outfile = paste0(outfile, ext)  
+  if (retimg){
+    img = readNIfTI(outfile, reorient=reorient, ...)
+    return(img)
+  }
+  return(res)
+}
+
+#' @title Help for FSL BET
+#' @description This function calls \code{bet}'s help
+#' @return Prints help output and returns output as character vector
+#' @export
+fslbet.help = function(){
+  return(fslhelp("bet", help.arg=""))
 }
