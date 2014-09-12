@@ -60,6 +60,10 @@ rescale_img = function(filename,
 #' @title Change Data type for img
 #' @return object of type nifti
 #' @param img nifti object (or character of filename)
+#' @param type_string (NULL) character of datatype and bitpix.  Supercedes
+#' both datatype and bitpix.  If specified 
+#' \code{convert.datatype[[type_string]]} and 
+#' \code{convert.bitpix[[type_string]]} will be used.
 #' @param datatype (NULL) character of datatype see 
 #' \code{\link{convert.datatype}}
 #' @param bitpix (NULL) character of bitpix see 
@@ -70,8 +74,16 @@ rescale_img = function(filename,
 #' for image masks - makes them binary if
 #' @name datatype
 #' @export
-datatype = function(img, datatype=NULL, bitpix=NULL, trybyte=TRUE){
+datatype = function(img, type_string = NULL,
+                    datatype=NULL, bitpix=NULL, trybyte=TRUE){
   img = check_nifti(img)
+  if (!is.null(type_string)){
+    accepted = names(convert.datatype())
+    type_string = toupper(type_string)
+    stopifnot(type_string %in% accepted)
+    datatype = convert.datatype()[[type_string]]
+    bitpix = convert.bitpix()[[type_string]]
+  }  
   if (!is.null(datatype) & !is.null(bitpix)){
     img@datatype <- datatype
     img@bitpix <- bitpix
@@ -192,11 +204,14 @@ check_nifti = function(x, reorient=FALSE, allow.array=FALSE){
 #' an object of class nifti 
 #' @param margin Margin of image to z-score over (3-Axial, 2-Sagittal, 
 #' 1-Coronal)
+#' @param centrality (character) Measure to center the data, 
+#' either mean or median
 #' @param remove.na (logical) change NAs to remove.val
 #' @param remove.nan (logical) change NaN to remove.val
 #' @param remove.inf (logical) change Inf to remove.val
 #' @param remove.val (logical) value to put the NA/NaN/Inf
 #' @export
+#' @importFrom matrixStats colMedians
 #' @examples
 #' dim = c(100, 30, 5)
 #' img = array(rnorm(prod(dim), mean=4, sd=4), 
@@ -224,9 +239,12 @@ check_nifti = function(x, reorient=FALSE, allow.array=FALSE){
 #' stopifnot(all.equal(try1, truth1))
 #'   
 #' 
-zscore_img <- function(img, mask = NULL, margin=3, remove.na = TRUE,
+zscore_img <- function(img, mask = NULL, margin=3, 
+                       centrality = c("mean", "median"),
+                       remove.na = TRUE,
                        remove.nan = TRUE, remove.inf = TRUE,
                        remove.val = 0){
+  centrality = match.arg(centrality, c("mean", "median"))
   img = check_nifti(img, allow.array=TRUE)
   orig.img = img
   dimg = dim(orig.img)
@@ -250,7 +268,12 @@ zscore_img <- function(img, mask = NULL, margin=3, remove.na = TRUE,
   img = aperm(img, perm)
   
   vec = matrix(img, ncol=dimg[margin])
-  m = colMeans(vec, na.rm=TRUE)
+  if (centrality == "mean") {
+    m = colMeans(vec, na.rm=TRUE)
+  }
+  if (centrality == "median") {
+    m = colMedians(vec, na.rm=TRUE)
+  }  
   s = colSds(vec, na.rm=TRUE)
   
   vecc = (t(vec) - m)/s
@@ -264,6 +287,9 @@ zscore_img <- function(img, mask = NULL, margin=3, remove.na = TRUE,
     nim = orig.img
     nim@.Data = imgc
     imgc = nim
+    imgc = datatype(imgc, 
+                    datatype = convert.datatype()$FLOAT32, 
+                    bitpix = convert.bitpix()$FLOAT32) 
   }
   if (remove.na){
     imgc[is.na(imgc)] = remove.val

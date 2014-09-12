@@ -1,5 +1,5 @@
 #' @name get.fsl
-#' @title Get FSL's Location 
+#' @title Create command declaring FSLDIR
 #' @description Finds the FSLDIR from system environment or \code{getOption("fsl.path")}
 #' for location of FSL fuctions
 #' @return NULL if FSL in path, or bash code for setting up FSL DIR
@@ -21,7 +21,6 @@ get.fsl = function(){
 }
 
 
-#' @name Get FSLDir
 #' @title Get FSL's Directory 
 #' @description Finds the FSLDIR from system environment or \code{getOption("fsl.path")}
 #' for location of FSL fuctions and returns it
@@ -94,26 +93,39 @@ get.imgext = function(){
 #' @description Takes in a object of class nifti, writes it to a temp file, appends
 #' .nii.gz as \code{\link{writeNIfTI}} adds it.
 #' @param nim object of class nifti
+#' @param gzipped Should file be gzipped? Passed to \code{\link{writeNIfTI}}
+#' @param checknan Check for NAs or NaNs
+#' @param ... Not used
 #' @return filename of output nii.gz
 #' @export
 #' 
-tempimg = function(nim){
+tempimg = function(nim, gzipped= TRUE, checknan = TRUE, ...){
   f = tempfile()
   nim = cal_img(nim)
   nim = zero_trans(nim)
-  writeNIfTI(nim, filename= f, onefile = TRUE, gzipped = TRUE)
-  f = paste0(f, ".nii.gz")
+  if (checknan){
+    cnim = c(nim)
+    if (any(is.na(cnim) | is.nan(cnim))){
+    warning("NAs and NaNs in image file, replacing with zeros")
+    nim[is.na(nim)| is.nan(cnim)] = 0
+    }
+  }
+  writeNIfTI(nim, filename= f, onefile = TRUE, gzipped = gzipped)
+  ext = ".nii"
+  if (gzipped) ext = paste0(ext, '.gz')
+  f = paste0(f, ext)
   return(f)
 }
 
 #' @title Check if filename is character or nifti object
 #' @param file character or nifti object
+#' @param ... options passed to \code{\link{tempimg}}
 #' @return character filename or temporary nii
 #' @export
 #' 
-checkimg = function(file){
+checkimg = function(file, ...){
   if (inherits(file, "nifti")){
-    return(tempimg(file))
+    return(tempimg(file, ...))
   }
   if (inherits(file, "character")){
     file = path.expand(file)
@@ -164,6 +176,7 @@ fslstats.help = function(){
 #' Passed to \code{\link{readNIfTI}}.
 #' @param intern (logical) to be passed to \code{\link{system}}
 #' @param opts (character) operations to be passed to \code{fslmaths}
+#' @param verbose (logical) print out command before running
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return If \code{retimg} then object of class nifti.  Otherwise,
 #' Result from system command, depends if intern is TRUE or FALSE.
@@ -175,28 +188,14 @@ fslmaths = function(
   reorient = FALSE,
   intern=TRUE, 
   opts = "", 
+  verbose = TRUE,
   ...){
   
-  cmd = get.fsl()
-  file = checkimg(file)
-  cmd <- paste0(cmd, sprintf('fslmaths "%s"', file))
-  if (retimg){
-    if (is.null(outfile)) {
-      outfile = tempfile()
-    }
-  } else {
-    stopifnot(!is.null(outfile))
-  }
-  outfile = nii.stub(outfile)
-  cmd <- paste(cmd, sprintf(' %s "%s";', opts, outfile))
-  ext = get.imgext()
-  
-  res = system(cmd, intern=intern)
-  outfile = paste0(outfile, ext)  
-  if (retimg){
-    img = readNIfTI(outfile, reorient=reorient, ...)
-    return(img)
-  } 
+  res = fslcmd("fslmaths", 
+                    file=file, 
+                    outfile = outfile, retimg= retimg,
+                    reorient=reorient, intern=intern, opts=opts, 
+                    ... = ..., verbose = verbose, samefile = FALSE)
   
   return(res)  
 }
@@ -240,6 +239,8 @@ fslbin = function(
 #' @description This function calls \code{fslstats}
 #' @param file (character) filename of image to be checked
 #' @param opts (character) operation passed to \code{fslstats}
+#' @param verbose (logical) print out command before running
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return Result of fslstats command
 #' @import stringr
 #' @export
@@ -253,10 +254,13 @@ fslbin = function(
 #' entropy = fslstats(img, opts='-E')
 #' })
 #' }  
-fslstats <- function(file, opts=""){
+fslstats <- function(file, opts="", verbose = TRUE, ...){
   cmd <- get.fsl()
-  file = checkimg(file)
+  file = checkimg(file, ...)
   cmd <- paste0(cmd, sprintf('fslstats "%s" %s', file, opts))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   x = str_trim(system(cmd, intern = TRUE))
   return(x)
 }
@@ -277,6 +281,7 @@ fslstats <- function(file, opts=""){
 #' @param reorient (logical) If retimg, should file be reoriented when read in?
 #' Passed to \code{\link{readNIfTI}}.
 #' @param intern (logical) to be passed to \code{\link{system}}
+#' @param verbose (logical) print out command before running
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return Result from system command, depends if intern is TRUE or FALSE.
 #' @examples
@@ -298,13 +303,14 @@ fslsmooth <- function(
   retimg = FALSE,
   reorient = FALSE,
   intern=TRUE, 
+  verbose = TRUE,
   ...){
 	
-  cmd = get.fsl()
-  file = checkimg(file)
+  leader = cmd = get.fsl()
+  file = checkimg(file, ...)
 	cmd <- paste0(cmd, sprintf('fslmaths "%s"', file))
 	if (! is.null(mask)) {
-    mask = checkimg(mask)
+    mask = checkimg(mask, ...)
     cmd <- paste(cmd, sprintf(' -mas "%s"', mask))
 	}
   if (retimg){
@@ -322,17 +328,21 @@ fslsmooth <- function(
 	### tempfile for mask.stub
   if ( !is.null(mask) ) {
     rm.mask.img = TRUE
-    mask = checkimg(mask)
+    mask = checkimg(mask, ...)
     mask.stub <- basename(mask)
     mask.stub = nii.stub(mask.stub)
   	mask.stub <- file.path(dirname(mask), mask.stub)
   	mask.blur <- sprintf("%s_%s", mask.stub, sigma)
-   	cmd <- paste(cmd, sprintf('fslmaths "%s" -s %s "%s";', 
-   		mask, sigma, mask.blur))
-   	cmd <- paste(cmd, sprintf('fslmaths "%s" -div "%s" -mas "%s" "%s";', 
-   		outfile, mask.blur, mask, outfile))
+   	cmd <- paste(cmd, paste0(leader, 
+                              sprintf('fslmaths "%s" -s %s "%s";', 
+   		mask, sigma, mask.blur)))
+   	cmd <- paste(cmd, paste0(leader, 
+                              sprintf('fslmaths "%s" -div "%s" -mas "%s" "%s";', 
+   		outfile, mask.blur, mask, outfile)))
   }
-  
+  if (verbose){
+    cat(cmd, "\n")
+  }  
 	res = system(cmd, intern=intern)
   outfile = paste0(outfile, ext)  
   if (rm.mask.img){
@@ -359,6 +369,7 @@ fslsmooth <- function(
 #' Passed to \code{\link{readNIfTI}}.
 #' @param intern (logical) to be passed to \code{\link{system}}
 #' @param opts (character) additional options to be passed to fslmask
+#' @param verbose (logical) print out command before running
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return Result from system command, depends if intern is TRUE or FALSE.
 #' if (have.fsl()){
@@ -375,7 +386,8 @@ fslsmooth <- function(
 fslmask <- function(file, mask, outfile=NULL, 
                     retimg = FALSE,
                     reorient = FALSE,
-                    intern=TRUE, opts="", ...){
+                    intern=TRUE, opts="", verbose = TRUE,
+                    ...){
 	
   cmd = get.fsl()
   if (retimg){
@@ -386,10 +398,13 @@ fslmask <- function(file, mask, outfile=NULL,
     stopifnot(!is.null(outfile))
   }
   outfile = nii.stub(outfile)
-  file = checkimg(file)
-  mask = checkimg(mask)
+  file = checkimg(file, ...)
+  mask = checkimg(mask, ...)
   cmd <- paste0(cmd, sprintf('fslmaths "%s" -mas "%s" %s "%s"', 
 		file, mask, opts, outfile))
+  if (verbose){
+    cat(cmd, "\n")
+  }
 	res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)  
@@ -413,6 +428,7 @@ fslmask <- function(file, mask, outfile=NULL,
 #' @param intern (logical) to be passed to \code{\link{system}}
 #' @param kopts (character) options for kernel
 #' @param opts (character) additional options to be passed to fslmaths
+#' @param verbose (logical) print out command before running
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return Result from system command, depends if intern is TRUE or FALSE.  If 
 #' retimg is TRUE, then the image will be returned. 
@@ -433,6 +449,7 @@ fslerode <- function(file, outfile=NULL,
                      retimg = FALSE,
                      reorient = FALSE,
                     intern=TRUE, kopts = "", opts="", 
+                    verbose = TRUE,
                     ...){
   
   cmd = get.fsl()
@@ -444,9 +461,12 @@ fslerode <- function(file, outfile=NULL,
     stopifnot(!is.null(outfile))
   }
   outfile = nii.stub(outfile)
-  file = checkimg(file)    
+  file = checkimg(file, ...)    
   cmd <- paste0(cmd, sprintf('fslmaths "%s" %s -ero %s "%s"', 
                             file, kopts, opts, outfile))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)
@@ -464,13 +484,24 @@ fslerode <- function(file, outfile=NULL,
 #' @description This function calls \code{fslval} to obtain a nifti header 
 #' @param file (character) image filename or character of class nifti
 #' @param keyword (character) keyword to be taken from fslhd
+#' @param verbose (logical) print out command before running 
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return Character of infromation from fslhd field specified in keyword
 #' @export
 #' @import stringr
-fslval <- function(file, keyword = ""){
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  fslval(mnifile, keyword = "dim1")
+#' }  
+fslval <- function(file, keyword = "", verbose = TRUE, ...){
   cmd <- get.fsl()
-  file = checkimg(file)
+  file = checkimg(file, ...)
   cmd <- paste0(cmd, sprintf('fslval "%s" %s', file, keyword))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   return(str_trim(system(cmd, intern=TRUE)))
 }
 
@@ -478,6 +509,10 @@ fslval <- function(file, keyword = ""){
 #' @description This function calls \code{fslval}'s help
 #' @return Prints help output and returns output as character vector
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslval.help()
+#' } 
 fslval.help = function(){
   return(fslhelp("fslval", help.arg=""))
 }
@@ -487,12 +522,23 @@ fslval.help = function(){
 #' @description This function calls \code{fslhd} to obtain a nifti header 
 #' @param file (character) image filename or character of class nifti
 #' @param opts (character) additional options to be passed to fslhd
+#' @param verbose (logical) print out command before running 
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return Character of infromation from fslhd
 #' @export
-fslhd <- function(file, opts=""){
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  fslhd(mnifile)
+#' }   
+fslhd <- function(file, opts="", verbose = TRUE, ...){
 	cmd <- get.fsl()
-  file = checkimg(file)
+  file = checkimg(file, ...)
 	cmd <- paste0(cmd, sprintf('fslhd "%s" %s', file, opts))
+  if (verbose){
+    cat(cmd, "\n")
+  }
 	system(cmd, intern=TRUE)
 }
 
@@ -500,6 +546,10 @@ fslhd <- function(file, opts=""){
 #' @description This function calls \code{fslhd}'s help
 #' @return Prints help output and returns output as character vector
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslhd.help()
+#' }   
 fslhd.help = function(){
   return(fslhelp("fslhd", help.arg=""))
 }
@@ -509,6 +559,13 @@ fslhd.help = function(){
 #' @param hd (character) header from \code{\link{fslhd}}
 #' @return data.frame of information from FSL header
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  hd = fslhd(mnifile)
+#'  fslhd.parse(hd)
+#' }  
 fslhd.parse <- function(hd){
   ss <- strsplit(hd, split=" ")
   ss <- lapply(ss, function(x) x[!x %in% ""])
@@ -539,10 +596,17 @@ fslhd.parse <- function(hd){
 #' @description This function obtains the s and q forms of an image transformation 
 #' matrix
 #' @param file (character) filename of image to pass to header
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return list with elements of sform and qform and their respective codes
 #' @export
-getForms <- function(file){
-  file = checkimg(file)  
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  getForms(mnifile)
+#' }   
+getForms <- function(file, ...){
+  file = checkimg(file, ...)  
 	x <- fslhd(file)
 	convmat <- function(form){
 		ss <- strsplit(form, " ")
@@ -588,6 +652,13 @@ getForms <- function(file){
 #' @param hd (list) sforms from \code{\link{getForms}}
 #' @return logical indicating if sform and qform consistent
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  forms = getForms(mnifile)
+#'  checkout(forms)
+#' } 
 checkout <- function(hd){
 	det.equal <- sign(det(hd$sform)) == sign(det(hd$qform))
 	lr.equal <- hd$ssor[1] == hd$sqor[1]
@@ -600,11 +671,18 @@ checkout <- function(hd){
 
 #' @title Wrapper for getForms with filename
 #' @param file (character) filename of image to be checked
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return result of \code{\link{checkout}}
 #' @export
-check_file <- function(file){
-  file = checkimg(file)  
-	hd <- getForms(file)
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  check_file(mnifile)
+#' } 
+check_file <- function(file, ...){
+  file = checkimg(file, ...)  
+	hd <- getForms(file, ...)
 	checkout(hd)
 }
 
@@ -613,9 +691,9 @@ check_sform <- function(hd, value=0){
 }
 
 
-check_sform_file <- function(file, value=0){
-  file = checkimg(file)  
-	hd <- getForms(file)
+check_sform_file <- function(file, value=0, ...){
+  file = checkimg(file, ...)  
+	hd <- getForms(file, ...)
 	check_sform(hd, value=value)
 }
 ## if sign(det(res$sform)) == sign(det(res$qform)) and 
@@ -625,13 +703,24 @@ check_sform_file <- function(file, value=0){
 #' @title Get range of an image
 #' @description This function calls \code{fslstats -R} to get the range of an image
 #' @param file (character) filename of image to be checked
+#' @param verbose (logical) print out command before running
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return numeric vector of length 2
 #' @import stringr
 #' @export
-fslrange <- function(file){
+#' @examples
+#' if (have.fsl()){
+#'  mnifile = file.path(fsldir(), "data", "standard", 
+#'    "MNI152_T1_2mm.nii.gz")
+#'  fslrange(mnifile)
+#' }  
+fslrange <- function(file, verbose =TRUE, ...){
 	cmd <- get.fsl()
-	file = checkimg(file)
+	file = checkimg(file, ...)
 	cmd <- paste0(cmd, sprintf('fslstats "%s" -R', file))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   x = str_trim(system(cmd, intern = TRUE))
   x = strsplit(x, " ")[[1]]
   x = as.numeric(x)
@@ -648,6 +737,7 @@ fslrange <- function(file){
 #' @param reorient (logical) If retimg, should file be reoriented when read in?
 #' Passed to \code{\link{readNIfTI}}.
 #' @param intern (logical) pass to \code{\link{system}}
+#' @param verbose (logical) print out command before running 
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return character or logical depending on intern
 #' @export
@@ -666,7 +756,8 @@ fslrange <- function(file){
 fslfill = function(file, outfile = NULL, bin=TRUE, 
                    retimg = FALSE,
                    reorient = FALSE,
-                   intern=TRUE, ...){
+                   intern=TRUE, verbose = TRUE,
+                   ...){
   cmd <- get.fsl()
   if (retimg){
     if (is.null(outfile)) {
@@ -677,11 +768,14 @@ fslfill = function(file, outfile = NULL, bin=TRUE,
   }  
   outfile = nii.stub(outfile)
   
-  file = checkimg(file)    
+  file = checkimg(file, ...)    
   runbin = ""
   if (bin) runbin = "-bin"
   cmd <- paste0(cmd, sprintf('fslmaths "%s" %s -fillh "%s"', file, 
                             runbin, outfile))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)  
@@ -704,6 +798,7 @@ fslfill = function(file, outfile = NULL, bin=TRUE,
 #' Passed to \code{\link{readNIfTI}}. 
 #' @param intern (logical) pass to \code{\link{system}}
 #' @param opts (character) additional options to be passed to fslmaths 
+#' @param verbose (logical) print out command before running 
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return character or logical depending on intern
 #' @export
@@ -723,7 +818,7 @@ fslthresh = function(file, outfile = NULL,
                      retimg = FALSE,
                      reorient = FALSE,
                      intern=TRUE, 
-                     opts = "", ...){
+                     opts = "", verbose = TRUE, ...){
   cmd <- get.fsl()
   if (retimg){
     if (is.null(outfile)) {
@@ -734,13 +829,16 @@ fslthresh = function(file, outfile = NULL,
   }  
   outfile = nii.stub(outfile)
   
-  file = checkimg(file)  
+  file = checkimg(file, ...)  
   
   if (!is.null(uthresh)){
     opts = paste(sprintf("-uthr %f", uthresh), opts)
   }
   cmd <- paste0(cmd, sprintf('fslmaths "%s" -thr %f %s "%s"', 
   	file, thresh, opts, outfile))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)  
@@ -760,6 +858,7 @@ fslthresh = function(file, outfile = NULL,
 #' @param reorient (logical) If retimg, should file be reoriented when read in?
 #' Passed to \code{\link{readNIfTI}}. 
 #' @param intern (logical) pass to \code{\link{system}}
+#' @param verbose (logical) print out command before running 
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return character or logical depending on intern
 #' @export
@@ -778,28 +877,34 @@ fslsub2 = function(file,
                    outfile = NULL, 
                    retimg = FALSE,
                    reorient = FALSE,
-                   intern=TRUE, ...){
-  cmd <- get.fsl()
-  if (retimg){
-    if (is.null(outfile)) {
-      outfile = tempfile()
-    }
-  } else {
-    stopifnot(!is.null(outfile))
-  }  
-  outfile = nii.stub(outfile)
-  
-  file = checkimg(file)  
-  
-  cmd <- paste0(cmd, sprintf('fslmaths "%s" -subsamp2 "%s"', 
-                            file, outfile))
-  res = system(cmd, intern=intern)
-  ext = get.imgext()
-  outfile = paste0(outfile, ext)  
-  if (retimg){
-    img = readNIfTI(outfile, reorient=reorient, ...)
-    return(img)
-  }
+                   intern=TRUE, verbose = TRUE, ...){
+  res = fslmaths(file=file, 
+           outfile = outfile, 
+           retimg = retimg,
+           reorient = reorient,
+           opts="-subsamp2",
+           intern=intern, verbose = verbose, ... = ...)
+#   cmd <- get.fsl()
+#   if (retimg){
+#     if (is.null(outfile)) {
+#       outfile = tempfile()
+#     }
+#   } else {
+#     stopifnot(!is.null(outfile))
+#   }  
+#   outfile = nii.stub(outfile)
+#   
+#   file = checkimg(file, ...)  
+#   
+#   cmd <- paste0(cmd, sprintf('fslmaths "%s" -subsamp2 "%s"', 
+#                             file, outfile))
+#   res = system(cmd, intern=intern)
+#   ext = get.imgext()
+#   outfile = paste0(outfile, ext)  
+#   if (retimg){
+#     img = readNIfTI(outfile, reorient=reorient, ...)
+#     return(img)
+#   }
   return(res)
 }
 
@@ -809,12 +914,17 @@ fslsub2 = function(file,
 #' @param file (character) filename of image to be thresholded
 #' @param intern (logical) pass to \code{\link{system}}
 #' @param opts (character) options for FSLView
+#' @param verbose (logical) print out command before running
+#' @param ... options passed to \code{\link{checkimg}}
 #' @return character or logical depending on intern
 #' @export
-fslview = function(file, intern=TRUE, opts =""){
+fslview = function(file, intern=TRUE, opts ="", verbose = TRUE, ...){
   cmd <- get.fsl()
-  file = checkimg(file)
+  file = checkimg(file, ...)
   cmd <- paste0(cmd, sprintf('fslview "%s" %s', file, opts))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   return(res)
 }
@@ -823,6 +933,10 @@ fslview = function(file, intern=TRUE, opts =""){
 #' @description This function calls \code{fslview}'s help
 #' @return Prints help output and returns output as character vector
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslview.help()
+#' }   
 fslview.help = function(){
   return(fslhelp("fslview"))
 }
@@ -838,6 +952,7 @@ fslview.help = function(){
 #' @param reorient (logical) If retimg, should file be reoriented when read in?
 #' Passed to \code{\link{readNIfTI}}.
 #' @param intern (logical) pass to \code{\link{system}}
+#' @param verbose (logical) print out command before running 
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return character or logical depending on intern
 #' @export
@@ -846,7 +961,7 @@ fslmerge = function(infiles,
                    outfile = NULL, 
                    retimg = FALSE,
                    reorient = FALSE,                   
-                   intern=TRUE, ...){
+                   intern=TRUE, verbose = TRUE, ...){
   cmd <- get.fsl()
   direction = direction[1]
   if (retimg){
@@ -857,10 +972,14 @@ fslmerge = function(infiles,
     stopifnot(!is.null(outfile))
   }   
   outfile = nii.stub(outfile)  
-  file = checkimg(file)  
+  infiles = sapply(infiles, checkimg)
+  infiles = paste(infiles, sep="", collapse = " ")
   
-  cmd <- paste0(cmd, sprintf('fslmerge "%s" -%s "%s"', 
-                            outfile, direction, infiles))
+  cmd <- paste0(cmd, sprintf('fslmerge -%s "%s" %s', 
+                             direction, outfile, infiles))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)  
@@ -876,6 +995,10 @@ fslmerge = function(infiles,
 #' @description This function calls \code{fslmerge}'s help
 #' @return Prints help output and returns output as character vector
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslmerge.help()
+#' }  
 fslmerge.help = function(){
   return(fslhelp("fslmerge"))
 }
@@ -883,7 +1006,7 @@ fslmerge.help = function(){
 
 
 #' @title Register using FLIRT
-#' @description This function calls \code{fslirt} to register infile to reffile
+#' @description This function calls \code{flirt} to register infile to reffile
 #' and either saves the image or returns an object of class nifti, along with the
 #' transformation matrix omat  
 #' @param infile (character) input filename
@@ -896,6 +1019,7 @@ fslmerge.help = function(){
 #' Passed to \code{\link{readNIfTI}}. 
 #' @param intern (logical) pass to \code{\link{system}}
 #' @param opts (character) additional options to FLIRT
+#' @param verbose (logical) print out command before running
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return character or logical depending on intern
 #' @export
@@ -906,7 +1030,7 @@ flirt = function(infile,
                     retimg = FALSE,
                     reorient = FALSE,                 
                     intern=TRUE,
-                    opts="", ...){
+                    opts="", verbose = TRUE, ...){
   cmd <- get.fsl()
   if (retimg){
     if (is.null(outfile)) {
@@ -918,14 +1042,19 @@ flirt = function(infile,
 #   infile = path.expand(infile)
 #   outfile = path.expand(outfile)
 #   reffile = path.expand(reffile)
-  infile = checkimg(infile)  
-  reffile = checkimg(reffile)  
-  outfile = checkimg(outfile)  
-  outfile = nii.stub(outfile)
+  infile = checkimg(infile, ...)  
+  reffile = checkimg(reffile, ...)  
+  outfile = checkimg(outfile, ...)  
+  outfile = nii.stub(outfile, ...)
 
   omat = path.expand(omat)
-  cmd <- paste0(cmd, sprintf('flirt -in "%s" -ref "%s" -out "%s" -dof %d %s', 
-                            infile, reffile, outfile, dof, opts))
+  cmd <- paste0(cmd, sprintf(
+    'flirt -in "%s" -ref "%s" -out "%s" -dof %d -omat "%s" %s', 
+    infile, reffile, outfile, dof, omat, opts))
+
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)  
@@ -940,7 +1069,12 @@ flirt = function(infile,
 #' @title FLIRT help
 #' @description This function calls \code{flirt}'s help
 #' @return Prints help output and returns output as character vector
+#' @aliases flirt_apply.help
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  flirt.help()
+#' } 
 flirt.help = function(){
   return(fslhelp("flirt"))
 }
@@ -953,21 +1087,26 @@ flirt.help = function(){
 #' (Default \code{dirname(file)})
 #' @param intern (logical) pass to \code{\link{system}}
 #' @param opts (character) options for melodic
+#' @param verbose (logical) print out command before running
+#' @param ... arguments passed to \code{\link{checkimg}}
 #' @return character or logical depending on intern
 #' @export
 melodic = function(file, 
                    outdir = dirname(file), 
                    intern=TRUE,                   
-                   opts =""){
+                   opts ="", verbose = TRUE, ...){
   cmd <- get.fsl()
   file = path.expand(outdir)
 
   outdir = path.expand(outdir)
   stopifnot(file.exists(outdir))
-  file = checkimg(file)  
+  file = checkimg(file, ...)  
 
   cmd <- paste0(cmd, sprintf('melodic --in "%s" --outdir "%s" %s', 
                              file, outdir, opts))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   return(res)
 }
@@ -976,6 +1115,10 @@ melodic = function(file,
 #' @description This function calls \code{melodic}'s help
 #' @return Prints help output and returns output as character vector
 #' @export
+#' @examples
+#' if (have.fsl()){
+#'  melodic.help()
+#' } 
 melodic.help = function(){
   return(fslhelp("melodic"))
 }
@@ -1014,6 +1157,7 @@ fslhelp = function(func_name, help.arg = "--help",extra.args = ""){
 #' @param intern (logical) pass to \code{\link{system}}
 #' @param opts (character) additional options to FLIRT
 #' @param betcmd (character) Use \code{bet} or \code{bet2} function
+#' @param verbose (logical) print out command before running 
 #' @param ... additional arguments passed to \code{\link{readNIfTI}}.
 #' @return character or logical depending on intern
 #' @export
@@ -1024,6 +1168,7 @@ fslbet = function(infile,
                  intern=TRUE,
                  opts="", 
                  betcmd = c("bet2", "bet"),
+                 verbose = TRUE,
                  ...){
   betcmd = match.arg( betcmd )
   cmd <- get.fsl()
@@ -1034,12 +1179,14 @@ fslbet = function(infile,
   } else {
     stopifnot(!is.null(outfile))
   }
-  infile = checkimg(infile)  
-  outfile = checkimg(outfile)  
-  outfile = nii.stub(outfile)
-  
+  infile = checkimg(infile, ...)  
+  outfile = checkimg(outfile, ...)  
+  outfile = nii.stub(outfile, ...)
   cmd <- paste0(cmd, sprintf('%s "%s" "%s" %s', 
                              betcmd, infile, outfile, opts))
+  if (verbose){
+    cat(cmd, "\n")
+  }
   res = system(cmd, intern=intern)
   ext = get.imgext()
   outfile = paste0(outfile, ext)  
@@ -1052,8 +1199,286 @@ fslbet = function(infile,
 
 #' @title Help for FSL BET
 #' @description This function calls \code{bet}'s help
+#' @param betcmd (character) Get help for \code{bet} or \code{bet2} function
 #' @return Prints help output and returns output as character vector
 #' @export
-fslbet.help = function(){
-  return(fslhelp("bet", help.arg=""))
+#' @examples
+#' if (have.fsl()){
+#'  fslbet.help()
+#'  fslbet.help("bet")
+#' }  
+fslbet.help = function(betcmd = c("bet2", "bet")){
+  betcmd = match.arg( betcmd )
+  return(fslhelp(betcmd, help.arg=""))
+}
+
+
+#' @title Image Center of Gravity
+#' @description Find Center of Gravity of Image, after thresholding
+#' @param img Object of class nifti
+#' @param thresh threshold for image, will find \code{img > 0}
+#' @param ceil Run \code{\link{ceiling}} to force integers (usu for plotting)
+#' @return Vector of length 3
+#' @export
+#' @examples
+#' if (have.fsl()){
+#' x = array(rnorm(1e6), dim = c(100, 100, 100))
+#' img = nifti(x, dim= c(100, 100, 100), 
+#' datatype = convert.datatype()$FLOAT32, cal.min = min(x), 
+#' cal.max = max(x), pixdim = rep(1, 4))
+#' cog(img)
+#' } 
+cog = function(img, thresh = 0, ceil = FALSE){
+#   stopifnot(inherits(img, "nifti"))
+  xyz = colMeans(which(img > thresh, arr.ind = TRUE))
+  if (ceil) xyz = ceiling(xyz)
+  return(xyz)
+}
+
+
+#' @title Image Center of Gravity (FSL)
+#' @description Find Center of Gravity of Image from FSL
+#' @param img Object of class nifti, or path of file
+#' @param mm Logical if the center of gravity (COG) would be in mm (default \code{TRUE})
+#' or voxels (\code{FALSE})
+#' @param verbose (logical) print out command before running 
+#' @return Vector of length 3
+#' @note FSL uses a 0-based indexing system, which will give you a different 
+#' answer compared to \code{cog}, but \code{fslcog(img, mm = FALSE) +1} 
+#' should be relatively close to \code{cog(img)}
+#' @export
+#' @examples
+#' if (have.fsl()){
+#' x = array(rnorm(1e6), dim = c(100, 100, 100))
+#' img = nifti(x, dim= c(100, 100, 100), 
+#' datatype = convert.datatype()$FLOAT32, cal.min = min(x), 
+#' cal.max = max(x), pixdim = rep(1, 4))
+#' fslcog(img)
+#' }
+fslcog = function(img, mm = TRUE, verbose = TRUE){
+  opts = ifelse(mm, "-c", "-C")
+  cog = fslstats(img, opts = opts, verbose = verbose)
+  cog = as.numeric(strsplit(cog, " ")[[1]])
+  cog
+}
+
+
+
+#' @title FSL Orient 
+#' @description This function calls \code{fslorient}
+#' @param file (character) image to be manipulated
+#' @param retimg (logical) return image of class nifti
+#' @param reorient (logical) If \code{retimg}, should file be reoriented when read in?
+#' Passed to \code{\link{readNIfTI}}.
+#' @param intern (logical) to be passed to \code{\link{system}}
+#' @param opts (character) operations to be passed to \code{fslorient}
+#' @param verbose (logical) print out command before running
+#' @param ... additional arguments passed to \code{\link{readNIfTI}}.
+#' @return If \code{retimg} then object of class nifti.  Otherwise,
+#' Result from system command, depends if intern is TRUE or FALSE.
+#' @export
+fslorient = function(
+  file,
+  retimg = FALSE,
+  reorient = FALSE,
+  intern=TRUE, 
+  opts = "", 
+  verbose = TRUE,
+  ...){
+  
+  if (grepl("-get", opts) & retimg){
+    warning(paste0("fslorient option was a -get, ",
+                   "image was not changed - output not returned"))
+  }  
+  cmd = get.fsl()
+  file = checkimg(file, ...)
+  cmd <- paste0(cmd, sprintf('fslorient %s "%s"', opts, file))
+  outfile = nii.stub(file)
+  ext = get.imgext()  
+  outfile = paste0(outfile, ext)
+  if (verbose){
+    cat(cmd, "\n")
+  }
+  res = system(cmd, intern=intern)
+  if (retimg){
+    img = readNIfTI(outfile, reorient=reorient, ...)
+    return(img)
+  } 
+  return(res)  
+}
+
+#' @title fslorient help
+#' @description This function calls \code{fslorient}'s help
+#' @return Prints help output and returns output as character vector
+#' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslorient.help()
+#' } 
+fslorient.help = function(){
+  return(fslhelp("fslorient", help.arg=""))
+}
+
+
+
+#' @title FSL Orient to MNI
+#' @description This function calls \code{fslreorient2std}
+#' @param file (character) image to be manipulated
+#' @param retimg (logical) return image of class nifti
+#' @param reorient (logical) If \code{retimg}, should file be reoriented when read in?
+#' Passed to \code{\link{readNIfTI}}.
+#' @param intern (logical) to be passed to \code{\link{system}}
+#' @param verbose (logical) print out command before running
+#' @param ... additional arguments passed to \code{\link{readNIfTI}}.
+#' @return If \code{retimg} then object of class nifti.  Otherwise,
+#' Result from system command, depends if intern is TRUE or FALSE.
+#' @export
+fslreorient2std = function(
+  file,
+  retimg = FALSE,
+  reorient = FALSE,
+  intern=TRUE, 
+  verbose = TRUE,
+  ...){
+  
+  res = fslcmd(func="fslreorient2std", 
+               file= file,
+               outfile = NULL,
+               retimg = retimg,
+               reorient = reorient,
+               intern = intern,
+               opts = "",
+               verbose = verbose,
+               ... = ..., 
+               samefile = TRUE)
+    
+  return(res)  
+}
+
+#' @title fslreorient2std help
+#' @description This function calls \code{fslreorient2std}'s help
+#' @return Prints help output and returns output as character vector
+#' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslreorient2std.help()
+#' }  
+fslreorient2std.help = function(){
+  return(fslhelp("fslreorient2std", help.arg=""))
+}
+
+
+
+#' @title FSL Swap Dimensions 
+#' @description This function calls \code{fslswapdim}
+#' @param file (character) image to be manipulated
+#' @param outfile (character) resultant image name (optional)
+#' @param retimg (logical) return image of class nifti
+#' @param reorient (logical) If retimg, should file be reoriented when read in?
+#' Passed to \code{\link{readNIfTI}}.
+#' @param intern (logical) to be passed to \code{\link{system}}
+#' @param a (character) Option for x domain in \code{fslswapdim}
+#' @param b (character) Option for y domain in \code{fslswapdim}
+#' @param c (character) Option for z domain in \code{fslswapdim}
+#' @param verbose (logical) print out command before running
+#' @param ... additional arguments passed to \code{\link{readNIfTI}}.
+#' @return If \code{retimg} then object of class nifti.  Otherwise,
+#' Result from system command, depends if intern is TRUE or FALSE.
+#' @export
+fslswapdim = function(
+  file,
+  outfile=NULL, 
+  retimg = FALSE,
+  reorient = FALSE,
+  intern=TRUE, 
+  a = "x",
+  b = "y",
+  c = "z",
+  verbose = TRUE,
+  ...){
+  
+  opts = paste(a, b, c)
+  
+  res = fslcmd(func="fslswapdim", 
+               file= file,
+               outfile = NULL,
+               retimg = retimg,
+               reorient = reorient,
+               intern = intern,
+               opts = opts,
+               verbose = verbose,
+               ... = ..., 
+               samefile = FALSE)
+  
+  return(res)  
+}
+
+#' @title fslswapdim help
+#' @description This function calls \code{fslswapdim}'s help
+#' @return Prints help output and returns output as character vector
+#' @export
+#' @examples
+#' if (have.fsl()){
+#'  fslswapdim.help()
+#' }  
+fslswapdim.help = function(){
+  return(fslhelp("fslswapdim"))
+}
+
+
+#' @title FSL Command Wrapper
+#' @description This function calls fsl command passed to \code{func}
+#' @param func (character) FSL function
+#' @param file (character) image to be manipulated
+#' @param outfile (character) resultant image name (optional)
+#' @param retimg (logical) return image of class nifti
+#' @param reorient (logical) If retimg, should file be reoriented when read in?
+#' Passed to \code{\link{readNIfTI}}.
+#' @param intern (logical) to be passed to \code{\link{system}}
+#' @param opts (character) operations to be passed to \code{func} 
+#' @param verbose (logical) print out command before running
+#' @param samefile (logical) is the output the same file?
+#' @param ... additional arguments passed to \code{\link{readNIfTI}}.
+#' @return If \code{retimg} then object of class nifti.  Otherwise,
+#' Result from system command, depends if intern is TRUE or FALSE.
+#' @export
+fslcmd = function(
+  func,
+  file,
+  outfile=NULL, 
+  retimg = FALSE,
+  reorient = FALSE,
+  intern=TRUE, 
+  opts = "", 
+  verbose = TRUE,
+  samefile = FALSE,
+  ...){
+  
+  cmd = get.fsl()
+  file = checkimg(file, ...)
+  cmd <- paste0(cmd, sprintf('%s "%s"', func, file))
+  no.outfile = is.null(outfile)
+  if (no.outfile & samefile) outfile = ""  
+  if (retimg){
+    if (is.null(outfile)) {
+      outfile = tempfile()
+    }
+  } else {
+    stopifnot(!is.null(outfile))
+  }
+  outfile = nii.stub(outfile)
+  cmd <- paste(cmd, sprintf(' %s "%s";', opts, outfile))
+  ext = get.imgext()
+  if (verbose){
+    cat(cmd, "\n")
+  }
+  res = system(cmd, intern=intern)
+  outfile = paste0(outfile, ext)  
+  if (retimg){
+    if (samefile) outfile = file
+    img = readNIfTI(outfile, reorient=reorient, ...)
+    return(img)
+  } 
+  
+  return(res)  
 }

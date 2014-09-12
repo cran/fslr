@@ -1,9 +1,9 @@
 Package: fslr
 Type: Package
 Title: Wrapper functions for FSL (FMRIB Software Library) from
-        Functional MRI. of the Brain (FMRIB)
-Version: 1.1
-Date: 2014-06-17
+        Functional MRI of the Brain (FMRIB)
+Version: 1.3
+Date: 2014-09-12
 Author: John Muschelli <muschellij2@gmail.com>
 Maintainer: John Muschelli <muschellij2@gmail.com>
 Description: Wrapper functions that interface with FSL
@@ -16,7 +16,8 @@ License: GPL-2
 VignetteBuilder: knitr
 Suggests: knitr
 BugReports: https://github.com/muschellij2/fslr/issues
-Packaged: 2014-07-30 22:00:38 UTC; johnmuschelli
+SystemRequirements: FSL (http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
+Packaged: 2014-11-04 00:15:35 UTC; johnmuschelli
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2014-07-31 07:17:59
+Date/Publication: 2014-11-04 02:01:04

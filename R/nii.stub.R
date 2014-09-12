@@ -2,10 +2,13 @@
 #' @description Quick helper function to strip of .nii or .nii.gz from filename
 #' @return NULL
 #' @param x character vector of filenames ending in .nii or .nii.gz
+#' @param bn Take \code{\link{basename}} of file?
 #' @export
-nii.stub = function(x){
+nii.stub = function(x, bn=FALSE){
+  x = path.expand(x)
   stub = gsub("\\.gz$", "", x)
   stub = gsub("\\.nii$", "", stub)
+  if (bn) stub = basename(stub)
   return(stub)
 }
 
@@ -25,8 +28,8 @@ cal_img = function(img){
   cmax = ifelse(is.finite(cmax), cmax, 0)
   cmin = min(img, na.rm=TRUE) 
   cmin = ifelse(is.finite(cmin), cmin, 0)  
-  img@cal_max = cmax
-  img@cal_min = cmin
+  cal.max(img) = cmax
+  cal.min(img) = cmin
   img
 }
 
@@ -54,4 +57,40 @@ zero_trans = function(img){
 #' @export
 voxdim = function(img){
   pixdim(img)[2:4]
+}
+
+
+#' @title Drop Image Dimension
+#' @return Object of class nifti
+#' @param img nifti object
+#' @description Drops a dimension of an image that has one-dimension and 
+#' sets respective values to 0 in pixdim or 1 in dim
+#' @export
+drop_img_dim = function(img){
+  dim_  = img@dim_
+  pdim = pixdim(img)
+  no.data = dim_ <= 1
+  no.data[1] = FALSE
+  pdim[no.data] = 0
+  pixdim(img) = pdim
+  ### subtract 1 for first observation
+  ndim = sum(!no.data) - 1
+  dim_[1] = ndim
+  dim_[no.data] = 1
+  img@dim_ = dim_
+  img@.Data = drop(img@.Data)
+  img
+}
+
+#' @title Creates onefile specification
+#' @return Object of class nifti
+#' @param img nifti object
+#' @description Changes the magic and vox_offset slots to be consistent 
+#' with onefile option in \code{\link{writeNIfTI}}.  As of version 0.4.0,
+#' \code{oro.nifti} did not support "ni1" magic outputs for output.
+#' @export
+onefile = function(img){
+  img@magic = "n+1"
+  img@vox_offset = 352
+  img
 }
