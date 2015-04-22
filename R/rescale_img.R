@@ -29,6 +29,10 @@ rescale_img = function(filename,
     # inter = as.numeric(img@scl_inter)
   # slope = as.numeric(img@scl_slope)
   # img = (img * slope + inter)
+  r = range(c(img))
+  if (r[1] >= min.val & r[2] <= max.val){
+    return(img)
+  }
   img[img < min.val] = min.val
   img[img > max.val] = max.val
   img = zero_trans(img)
@@ -36,6 +40,7 @@ rescale_img = function(filename,
   img = cal_img(img)
   img@descrip = paste0("written by ", writer, " - ", img@descrip)
   
+  img = drop_img_dim(img)
   #### create histograms
   if (!is.null(pngname)){
     options(bitmapType = 'cairo') 
@@ -74,7 +79,7 @@ rescale_img = function(filename,
 #' for image masks - makes them binary if
 #' @name datatype
 #' @export
-datatype = function(img, type_string = NULL,
+datatyper = function(img, type_string = NULL,
                     datatype=NULL, bitpix=NULL, trybyte=TRUE){
   img = check_nifti(img)
   if (!is.null(type_string)){
@@ -157,39 +162,10 @@ newnii = function(img, ...){
   img = check_nifti(img)
   img = zero_trans(img)
   img = cal_img(img)
-  img = datatype(img, ...)
+  img = datatyper(img, ...)
   return(img)
 }
 
-
-#' @title Check if nifti image or read in
-#' @import oro.nifti
-#' @description Simple check to see if input is character or of class nifti
-#' @return nifti object or array if allow.array=TRUE and x is an array
-#' @seealso \link{readNIfTI}
-#' @param x character path of image or 
-#' an object of class nifti, or array
-#' @param reorient (logical) passed to \code{\link{readNIfTI}} if the image
-#' is to be re-oriented
-#' @param allow.array (logical) Are array types allowed (TRUE) or
-#' should there be an error if the object is not character or class
-#' nifti.
-#' @export
-check_nifti = function(x, reorient=FALSE, allow.array=FALSE){
-  if (inherits(x, "character")) {
-    img = readNIfTI(x, reorient=reorient)
-  } else {
-    if (inherits(x, "nifti")){
-      img = x
-    } else {
-      if (inherits(x, "array") & allow.array){
-        return(x)
-      }
-      stop("x has unknown class - not char or nifti")
-    }
-  }
-  return(img)
-}
 
 #' @title Get Z-score over a margin of an img
 #' @import oro.nifti
@@ -206,12 +182,16 @@ check_nifti = function(x, reorient=FALSE, allow.array=FALSE){
 #' 1-Coronal)
 #' @param centrality (character) Measure to center the data, 
 #' either mean or median
+#' @param variability (character) Measure to scale the data
 #' @param remove.na (logical) change NAs to remove.val
 #' @param remove.nan (logical) change NaN to remove.val
 #' @param remove.inf (logical) change Inf to remove.val
 #' @param remove.val (logical) value to put the NA/NaN/Inf
 #' @export
-#' @importFrom matrixStats colMedians
+#' @importFrom matrixStats colMedians 
+#' @importFrom matrixStats colSds 
+#' @importFrom matrixStats colIQRDiffs colIQRs iqrDiff iqr
+#' @importFrom matrixStats colMadDiffs colMads madDiff
 #' @examples
 #' dim = c(100, 30, 5)
 #' img = array(rnorm(prod(dim), mean=4, sd=4), 
@@ -241,10 +221,14 @@ check_nifti = function(x, reorient=FALSE, allow.array=FALSE){
 #' 
 zscore_img <- function(img, mask = NULL, margin=3, 
                        centrality = c("mean", "median"),
+                       variability = c("sd", "iqrdiff", "mad", 
+                                       "maddiff", "iqr"),
                        remove.na = TRUE,
                        remove.nan = TRUE, remove.inf = TRUE,
                        remove.val = 0){
   centrality = match.arg(centrality, c("mean", "median"))
+  variability = match.arg(variability, c("sd", "iqrdiff", "mad", 
+                                         "maddiff", "iqr"))
   img = check_nifti(img, allow.array=TRUE)
   orig.img = img
   dimg = dim(orig.img)
@@ -255,39 +239,73 @@ zscore_img <- function(img, mask = NULL, margin=3,
   img[mask == 0] = NA
 
   stopifnot(length(dimg) == 3)  
-  if (margin == 3){
-    perm = 1:3
+  if (!is.null(margin)){
+    if (margin == 3){
+      perm = 1:3
+    }
+    if (margin == 2){
+      perm = c(1, 3, 2)
+    }  
+    if (margin == 1){
+      perm = c(2, 3, 1)
+    }
+    revperm = match(1:3, perm)
+    img = aperm(img, perm)
+    
+    vec = matrix(img, ncol=dimg[margin])
+    if (centrality == "mean") {
+      m = colMeans(vec, na.rm=TRUE)
+    }
+    if (centrality == "median") {
+      m = colMedians(vec, na.rm=TRUE)
+    } 
+    if (variability == "iqrdiff") {
+      s = colIQRDiffs(vec, na.rm=TRUE)
+    }
+    if (variability == "maddiff") {
+      s = colMadDiffs(vec, na.rm=TRUE)
+    }   
+    if (variability == "mad") {
+      s = colMads(vec, na.rm=TRUE)
+    }       
+    if (variability == "iqr") {
+      s = colIQRs(vec, na.rm=TRUE)
+    }       
+    if (variability == "sd") {
+      s = colSds(vec, na.rm=TRUE)
+    }     
+    
+    vecc = (t(vec) - m)/s
+    vecc = t(vecc)
+    imgc = array(vecc, 
+                 dim = dim(img))
+    imgc = aperm(imgc, revperm)
+  } else {
+    mn = do.call(centrality, list(x=c(img), na.rm=TRUE))
+    if (variability == "iqrdiff") {
+      s = iqrDiff(c(img), na.rm=TRUE)
+    }
+    if (variability == "sd") {
+      s = sd(c(img), na.rm=TRUE)
+    }
+    if (variability == "maddiff") {
+      s = madDiff(c(img), na.rm=TRUE)
+    }   
+    if (variability == "mad") {
+      s = mad(c(img), na.rm=TRUE)
+    }       
+    if (variability == "iqr") {
+      s = iqr(c(img), na.rm=TRUE)
+    }       
+    
+    imgc = (img - mn) / s
   }
-  if (margin == 2){
-    perm = c(1, 3, 2)
-  }  
-  if (margin == 1){
-    perm = c(2, 3, 1)
-  }
-  revperm = match(1:3, perm)
-  img = aperm(img, perm)
-  
-  vec = matrix(img, ncol=dimg[margin])
-  if (centrality == "mean") {
-    m = colMeans(vec, na.rm=TRUE)
-  }
-  if (centrality == "median") {
-    m = colMedians(vec, na.rm=TRUE)
-  }  
-  s = colSds(vec, na.rm=TRUE)
-  
-  vecc = (t(vec) - m)/s
-  vecc = t(vecc)
-  imgc = array(vecc, 
-               dim = dim(img))
-  imgc = aperm(imgc, revperm)
-  
   stopifnot(all.equal(dim(imgc), dim(orig.img)))
   if (inherits(orig.img, "nifti")){
     nim = orig.img
     nim@.Data = imgc
     imgc = nim
-    imgc = datatype(imgc, 
+    imgc = datatyper(imgc, 
                     datatype = convert.datatype()$FLOAT32, 
                     bitpix = convert.bitpix()$FLOAT32) 
   }
