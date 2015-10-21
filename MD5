@@ -1,6 +1,5 @@
-cb2cf7b029fc414d359d8cbf7b62c615 *DESCRIPTION
-1585820cbc1226fa4934348c29b0071d *NAMESPACE
-2f7bc7c5ead2fc94debcb2af3d5770e0 *NEWS
+f7f847a3477caf0e09af9c12ab4863e0 *DESCRIPTION
+ea10b7cfe0f86e2db3585c55e94c3ecb *NAMESPACE
 a60ff6159c2a7d00fe21bb56e1c326cb *R/applywarp.R
 be49032b089e90045e305ec63d51f147 *R/aux_file.R
 9addab770172c9361383d870340967a3 *R/bitpix.R
@@ -16,7 +15,7 @@ aba2465eab4230f75561d13b8af10478 *R/checkimg.R
 ee23321bb8708b252f5bd2db0643303c *R/descrip.R
 6d56058acd1c8f6ec94539df59a810bd *R/dim_.R
 63437fb91b5486e477fa573c1ac02379 *R/double_ortho.R
-19f9082c0082ff8bd36453d10a98981c *R/dropEmptyImageDimensions.R
+5edccdb7ff7adbcd4474f6291ccf0e9b *R/dropEmptyImageDimensions.R
 401fbd624d6aa26d0e931ea959702dc4 *R/fast.R
 24534426b5bb41070a1a8e575ef12d50 *R/file_imgext.R
 92334587f12b14477f364132e40d3ac7 *R/flirt_apply.R
@@ -48,8 +47,8 @@ e5c557b6d0c04e0c996cf3d3a2ae5857 *R/fsledge.R
 9a45c4fc8d1bda280972e4fedf1aacc6 *R/fslexp.R
 4440b5a1c2ac0c09281ece2482fb233f *R/fslexp.help.R
 ed7c19def197e0574e3e8f1facdeadcc *R/fslfill.help.R
-7b242abe4c12625d0e4fe7a658d9b0e8 *R/fslfill2.R
-df4feffe3eaf18930c7b00d72c5ee81f *R/fslhd.R
+1506910f0b7c088ea5c4fcf5970d4018 *R/fslfill2.R
+321855cd703e9f4c98ea7d26d3abc9cd *R/fslhd.R
 c1fa68ba6cd43fbe9337c334f106f6df *R/fslindex.R
 e1f7ab5ebb822b35407f3deddd3a6ed1 *R/fslindex.help.R
 c4e3ea80bdc2264070deb11c7412cdc6 *R/fsllog.R
@@ -94,11 +93,13 @@ f648beedb64a237a1d4397bf1d17a300 *R/intent_p1.R
 e56e98d43d9a2182fc9df2cd8cf2731a *R/mask_img.R
 c1de2e912b266d6d05bde5d50b72bdca *R/niftiarr.R
 43ebfd9f9aab02478a03b9513b0812ba *R/nii.stub.R
-1d2abef8ba19483662bac7423df7ac86 *R/ortho2.R
+345ed9807ac20fb0c1378c903f04535e *R/ortho2.R
+6541c68ccfef7291eecd7e67d06e7c51 *R/ortho_diff.R
 953351b5cac6313158395fa288eb883f *R/pixdim.R
 f9f289c36a5339d3edab2cc352cfe899 *R/qform.R
 500748b771c9484c3e93c6ef7710e091 *R/qform_code.R
-9c903cf04bba7d6673e78e5274357b78 *R/rescale_img.R
+5afacba48187fe3e8456c82499f220d9 *R/readNIfTI2.R
+22bf424ce01fff5981f5e73a3389e1ab *R/rescale_img.R
 34b1b78b33fe0efc51090063b5aea81e *R/robust_window.R
 2477ed13b7218b464a323f7fcb087245 *R/scl_inter.R
 84db4775fc417cba3a648583d7f3fd2b *R/scl_slope.R
@@ -114,8 +115,9 @@ d23d6bd15e046098b1df600eb3711521 *R/slice_start.R
 307f8c27da2c31b2880e4f81ab4f19d8 *R/toffset.R
 fe2703956d83f8351f03d266430905fc *R/vox_offset.R
 327de57a3f492a3e56f9e502bc92b559 *R/window_img.R
-80921840590d8798d59bcb21859b3fc1 *README.md
-7d8478a62be00c41de8baf48e53c8d78 *build/vignette.rds
+1233513c2963088a387709966715e2bc *R/writenii.R
+2604cdc0935fc0550680dbade1d5ae93 *README.md
+48f24274871bd9618107e8de1390fc65 *build/vignette.rds
 fc652687faaa8cef9a9e25c6869e2901 *inst/doc/fslr.R
 8bcab6b97c89c049bab7e6fb204d7f63 *inst/doc/fslr.Rmd
 d2847f4ea402d53610f0d8719d3b7235 *inst/doc/fslr.html
@@ -129,7 +131,7 @@ df1504da1840bb551d96f48cc8adb95c *man/check_file.Rd
 afe89f485a47a851777b6cc3a162a8e6 *man/checkimg-methods.Rd
 d97213a1214efb4a396182f5958550a2 *man/checknii-methods.Rd
 c25235af3d40c9c5d03fea8b5e2d8f94 *man/checkout.Rd
-8f971578175f311a280494ba31bf0b20 *man/cog.Rd
+8246dfb77e9bc3668779943cebc7d9c5 *man/cog.Rd
 4bd1b5ea84cea86ca5ea3f2600a28567 *man/colorbar.Rd
 13e0d52f71dae2cf97485028031da865 *man/copyNIfTIHeader.Rd
 550edf0cc26499dfb6a8dcb4fd2a7808 *man/data_type-methods.Rd
@@ -269,8 +271,10 @@ dd69e3f2147969dbb56ca879a1e48a4b *man/newnii.Rd
 a6e5974ba834fde5308e498d053e642e *man/nii.stub.Rd
 8a84c0ff67baf43d63eb16cffd0e0486 *man/orientation-methods.Rd
 9e608b93c9c1749c2e34eeeedb69a55f *man/ortho2.Rd
+d7f223f76779fa3f4e8bb3e6e3652639 *man/ortho_diff.Rd
 8bec017e981d45bef0809ab5e93e9288 *man/pixdim-methods.Rd
 c2de306b89d237247473823dc83d7167 *man/qform_code-methods.Rd
+571009ebe97267d83baf859f0ac079a7 *man/readNIfTI2.Rd
 4c31db0fa4b81477fbddad0fbe637a58 *man/rescale_img.Rd
 feb04ea03f3249b3a8f9947821c88857 *man/robust_window.Rd
 4e66354b364297a2eca37def447ca0a0 *man/scl_inter-methods.Rd
@@ -287,6 +291,7 @@ dae077f4158a928a36bfc5d3731bb792 *man/slice_duration-methods.Rd
 5e611d6fee09b4c9ee6a8ce036795ad5 *man/toffset-methods.Rd
 f19bfe089d68c3660315db6f7d1ebd9f *man/vox_offset-methods.Rd
 47a5c9806452a3218f528bd2f490d3b8 *man/window_img.Rd
+50a08c5e167289080f276a5d3634f6ba *man/writeNIfTI2.Rd
 c6404489ab13c890231c2f1329e702a7 *man/xyz.Rd
 56cda7d04fcbcbb98397c87f782c9499 *man/zscore_img.Rd
 8bcab6b97c89c049bab7e6fb204d7f63 *vignettes/fslr.Rmd

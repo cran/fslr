@@ -16,6 +16,7 @@
 #' as sometimes DICOM scale and slope parameters may be inconsistent across sites
 #' and the data need to be value restricted
 #' @return Object of class nifti
+#' @import grDevices
 #' @export
 rescale_img = function(filename, 
                        pngname = NULL, 
@@ -125,7 +126,7 @@ datatyper = function(img, type_string = NULL,
       }
     }
     signed= FALSE
-    if (any(rr) < 0){
+    if (any(rr < 0)) {
       signed = TRUE
     }
     trange = diff(rr)
@@ -192,6 +193,7 @@ newnii = function(img, ...){
 #' @importFrom matrixStats colSds 
 #' @importFrom matrixStats colIQRDiffs colIQRs iqrDiff iqr
 #' @importFrom matrixStats colMadDiffs colMads madDiff
+#' @import stats
 #' @examples
 #' dim = c(100, 30, 5)
 #' img = array(rnorm(prod(dim), mean=4, sd=4), 

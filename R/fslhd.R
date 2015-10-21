@@ -842,12 +842,27 @@ fslsub2 = function(file,
 #' @export
 fslview = function(file, intern=TRUE, opts ="", verbose = TRUE, ...){
   cmd <- get.fsl()
-  file = checkimg(file, ...)
-  cmd <- paste0(cmd, sprintf('fslview "%s" %s', file, opts))
+  if (is.nifti(file)) {
+    file = checkimg(file)
+  }
+  file = lapply(file, checkimg, ...)
+  if (length(file) != length(opts)) {
+    opts = rep(opts, length = length(file))
+  } else {
+    if (length(file) > length(opts)) {
+      opts = c(opts, rep("", length = (length(file) - length(opts))))
+    } else {
+      opts = opts[seq(length(file))]
+    }
+  }
+  file = shQuote(file)
+  file = paste(file, opts)
+  file = paste(file, collapse = " ")
+  cmd <- paste0(cmd, sprintf('fslview %s', file))
   if (verbose){
     cat(cmd, "\n")
   }
-  res = system(cmd, intern=intern)
+  res = system(cmd, intern = intern)
   return(res)
 }
 
@@ -1131,6 +1146,7 @@ fslbet.help = function(betcmd = c("bet2", "bet")){
 #' @param img Object of class nifti
 #' @param thresh threshold for image, will find \code{img > 0}
 #' @param ceil Run \code{\link{ceiling}} to force integers (usu for plotting)
+#' @param warn Produce a warning if the image is empty after thresholding
 #' @return Vector of length 3
 #' @export
 #' @examples
@@ -1141,9 +1157,18 @@ fslbet.help = function(betcmd = c("bet2", "bet")){
 #' cal.max = max(x), pixdim = rep(1, 4))
 #' cog(img)
 #' } 
-cog = function(img, thresh = 0, ceil = FALSE){
+cog = function(img, thresh = 0, ceil = FALSE, warn = TRUE){
 #   stopifnot(inherits(img, "nifti"))
-  xyz = colMeans(which(img > thresh, arr.ind = TRUE))
+  mask = img > thresh
+  if (sum(mask, na.rm = TRUE) == 0) {
+    if (warn) {
+      warning(paste0("No voxels found to be > ", round(thresh, 3), 
+                     ", using the center of whole image"))
+    }
+    xyz = dim(mask) / 2
+  } else {
+    xyz = colMeans(which(mask, arr.ind = TRUE))
+  }
   if (ceil) xyz = ceiling(xyz)
   return(xyz)
 }
