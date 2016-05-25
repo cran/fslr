@@ -2,6 +2,7 @@
 #' @rdname dim_-methods
 #' @title Extract Image dim_ attribute 
 #' @name dim_-methods
+#' @description \code{dim_} method for class character
 #' @aliases dim_,character-method
 #' @param object is a filename to pass to \link{fslval}
 #' @import oro.nifti
@@ -9,7 +10,7 @@
 setMethod("dim_", "character", function(object){
   object = path.expand(object)
   stopifnot(file.exists(object))
-  slots = paste0("dim0", 0:7)
+  slots = paste0("dim", 0:7)
   res = sapply(slots, function(key) {
     fslval(object, keyword = key, verbose = FALSE)
   })

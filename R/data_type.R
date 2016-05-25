@@ -4,8 +4,9 @@
 #' @name data_type-methods
 #' @aliases data_type,character-method
 #' @import oro.nifti
-#' @param object is a filename to pass to \link{fslval}
 #' @export
+#' @description data_type method for character types
+#' @param object is a filename to pass to \link{fslval}
 #' 
 setMethod("data_type", "character", function(object) { 
   object = path.expand(object)

@@ -4,8 +4,9 @@
 #' @name scl_inter-methods
 #' @aliases scl_inter,character-method
 #' @import oro.nifti
-#' @param object is a filename to pass to \link{fslval}
 #' @export
+#' @description scl_inter method for character types
+#' @param object is a filename to pass to \link{fslval}
 #' 
 setMethod("scl_inter", "character", function(object) { 
   object = path.expand(object)

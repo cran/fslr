@@ -4,8 +4,9 @@
 #' @name intent_p1-methods
 #' @aliases intent_p1,character-method
 #' @import oro.nifti
-#' @param object is a filename to pass to \link{fslval}
 #' @export
+#' @description intent_p1 method for character types
+#' @param object is a filename to pass to \link{fslval}
 #' 
 setMethod("intent_p1", "character", function(object) { 
   object = path.expand(object)

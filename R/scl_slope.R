@@ -4,8 +4,9 @@
 #' @name scl_slope-methods
 #' @aliases scl_slope,character-method
 #' @import oro.nifti
-#' @param object is a filename to pass to \link{fslval}
 #' @export
+#' @description scl_slope method for character types
+#' @param object is a filename to pass to \link{fslval}
 #' 
 setMethod("scl_slope", "character", function(object) { 
   object = path.expand(object)

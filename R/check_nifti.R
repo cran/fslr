@@ -5,10 +5,10 @@
 #' @description Simple check to see if input is character or of 
 #' class nifti
 #' @return nifti object or array if allow.array=TRUE and x is an array
-#' @seealso \link{readNIfTI}
+#' @seealso \link{readnii}
 #' @param x character path of image or 
 #' an object of class nifti, or array
-#' @param reorient (logical) passed to \code{\link{readNIfTI}} 
+#' @param reorient (logical) passed to \code{\link{readnii}} 
 #' if the image
 #' is to be re-oriented
 #' @param allow.array (logical) Are array types allowed (TRUE) or
@@ -35,8 +35,8 @@ setMethod("check_nifti", "nifti", function(x,
 #'  
 #' @export
 setMethod("check_nifti", "character", function(x, 
-                                            reorient=FALSE, 
-                                            allow.array=FALSE) { 
+                                               reorient=FALSE, 
+                                               allow.array=FALSE) { 
   ### add vector capability
   if (length(x) > 1){
     file = lapply(x, check_nifti,  
@@ -44,7 +44,7 @@ setMethod("check_nifti", "character", function(x,
                   allow.array = allow.array)
     return(file)
   } else {
-    file = readNIfTI(x, reorient = reorient)    
+    file = readnii(x, reorient = reorient)    
     return(file)
   }
 })
@@ -68,8 +68,8 @@ setMethod("check_nifti", "list", function(x,
 #' @aliases check_nifti,array-method
 #' @export
 setMethod("check_nifti", "array", function(x,  
-                                          reorient=FALSE, 
-                                          allow.array=FALSE) { 
+                                           reorient=FALSE, 
+                                           allow.array=FALSE) { 
   if (!allow.array){
     stop("x is array but allow.array = FALSE")
   }

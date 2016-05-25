@@ -4,14 +4,14 @@
 #' @param pngname filename of png of histogram of values of image to be made. For no
 #' png - set to NULL (default)
 #' @param write.nii logical - should the image be written.  
-#' filename must be character if this is TRUE (default)
+#' @param outfile if \code{write.nii = TRUE}, filename of output file
 #' @param min.val minimum value of image (default -1024 (for CT)).  If no thresholding
 #' set to -Inf
 #' @param max.val maximum value of image (default 3071 (for CT)).  If no thresholding
 #' set to Inf
 #' @param ROIformat if TRUE, any values $< 0$ will be set to 0
 #' @param writer character value to add to description slot of NIfTI header
-#' @param ... extra methods to be passed to \code{\link{writeNIfTI}}
+#' @param ... extra methods to be passed to \code{\link{writenii}}
 #' @description Rescales an image to be in certain value range.  This was created
 #' as sometimes DICOM scale and slope parameters may be inconsistent across sites
 #' and the data need to be value restricted
@@ -20,14 +20,19 @@
 #' @export
 rescale_img = function(filename, 
                        pngname = NULL, 
-                       write.nii = TRUE,
+                       write.nii = FALSE,
+                       outfile = NULL,
                        min.val = -1024,
                        max.val = 3071,
                        ROIformat=FALSE, 
-                       writer= "dcm2nii", ...){
+                       writer = "dcm2nii", ...){
+  
+  if (write.nii){
+    stopifnot(!is.null(outfile))
+  }
   
   img = check_nifti(filename)
-    # inter = as.numeric(img@scl_inter)
+  # inter = as.numeric(img@scl_inter)
   # slope = as.numeric(img@scl_slope)
   # img = (img * slope + inter)
   r = range(c(img))
@@ -52,10 +57,9 @@ rescale_img = function(filename,
     hist(img)
     dev.off()
   }
-  filename = nii.stub(filename)
   
   if (write.nii) {
-    writeNIfTI(img, file=filename, ...)
+    writenii(img, filename = outfile, ...)
   }
   return(img)
 }
@@ -76,34 +80,36 @@ rescale_img = function(filename,
 #' \code{\link{convert.bitpix}} 
 #' @param trybyte (logical) Should you try to make a byte (UINT8) if image in
 #' c(0, 1)?
+#' @param warn Should a warning be issued if defaulting to FLOAT32?
 #' @description Tries to figure out the correct datatype for image.  Useful 
 #' for image masks - makes them binary if
 #' @name datatype
 #' @export
 datatyper = function(img, type_string = NULL,
-                    datatype=NULL, bitpix=NULL, trybyte=TRUE){
+                     datatype = NULL, bitpix=NULL, trybyte=TRUE,
+                     warn = TRUE){
   img = check_nifti(img)
-  if (!is.null(type_string)){
+  if (!is.null(type_string)) {
     accepted = names(convert.datatype())
     type_string = toupper(type_string)
     stopifnot(type_string %in% accepted)
     datatype = convert.datatype()[[type_string]]
     bitpix = convert.bitpix()[[type_string]]
   }  
-  if (!is.null(datatype) & !is.null(bitpix)){
+  if (!is.null(datatype) & !is.null(bitpix)) {
     img@datatype <- datatype
     img@bitpix <- bitpix
     return(img)
   }
-  if (!is.null(datatype) & is.null(bitpix)){
+  if (!is.null(datatype) & is.null(bitpix)) {
     stop("Both bitipx and datatype need to be specified if oneis")
   }
-  if (is.null(datatype) & !is.null(bitpix)){
+  if (is.null(datatype) & !is.null(bitpix)) {
     stop("Both bitipx and datatype need to be specified if oneis")
   }
   #### logical - sign to unsigned int 8
   is.log = inherits(img@.Data[1], "logical")
-  if (is.log){
+  if (is.log) {
     img@datatype <- convert.datatype()$UINT8
     img@bitpix <- convert.bitpix()$UINT8
     return(img)
@@ -115,17 +121,17 @@ datatyper = function(img, type_string = NULL,
     return(isTRUE(test))
   }  
   is.int = testInteger(img)
-  if (is.int){
-    rr = range(img, na.rm=TRUE)
+  if (is.int) {
+    rr = range(img, na.rm = TRUE)
     ##### does this just for binary mask
-    if (all(rr == c(0, 1)) & trybyte){
-      if (all(img %in% c(0, 1))){
-          img@datatype <- convert.datatype()$UINT8
-          img@bitpix <- convert.bitpix()$UINT8
-          return(img)
+    if (all(rr == c(0, 1)) & trybyte) {
+      if (all(img %in% c(0, 1))) {
+        img@datatype <- convert.datatype()$UINT8
+        img@bitpix <- convert.bitpix()$UINT8
+        return(img)
       }
     }
-    signed= FALSE
+    signed = FALSE
     if (any(rr < 0)) {
       signed = TRUE
     }
@@ -134,15 +140,17 @@ datatyper = function(img, type_string = NULL,
     if (trange > 255) num = 16
     if (trange > 65535) num = 32
     if (trange > 4294967295) num = 64
-    mystr= "INT"
+    mystr = "INT"
     if (!signed) mystr = paste0("U", mystr)
     mystr = paste0(mystr, num)
     img@datatype <- convert.datatype()[[mystr]]
     img@bitpix <- convert.bitpix()[[mystr]]
     return(img)
   } else {
-    warning("Assuming FLOAT32")
-    mystr= "FLOAT32"
+    if (warn) {
+      warning("Assuming FLOAT32")
+    }
+    mystr = "FLOAT32"
     img@datatype <- convert.datatype()[[mystr]]
     img@bitpix <- convert.bitpix()[[mystr]]
     return(img)
@@ -239,7 +247,7 @@ zscore_img <- function(img, mask = NULL, margin=3,
   }
   mask = check_nifti(mask, allow.array=TRUE)
   img[mask == 0] = NA
-
+  
   stopifnot(length(dimg) == 3)  
   if (!is.null(margin)){
     if (margin == 3){
@@ -256,25 +264,25 @@ zscore_img <- function(img, mask = NULL, margin=3,
     
     vec = matrix(img, ncol=dimg[margin])
     if (centrality == "mean") {
-      m = colMeans(vec, na.rm=TRUE)
+      m = colMeans(vec, na.rm = TRUE)
     }
     if (centrality == "median") {
-      m = colMedians(vec, na.rm=TRUE)
+      m = colMedians(vec, na.rm = TRUE)
     } 
     if (variability == "iqrdiff") {
-      s = colIQRDiffs(vec, na.rm=TRUE)
+      s = colIQRDiffs(vec, na.rm = TRUE)
     }
     if (variability == "maddiff") {
-      s = colMadDiffs(vec, na.rm=TRUE)
+      s = colMadDiffs(vec, na.rm = TRUE)
     }   
     if (variability == "mad") {
-      s = colMads(vec, na.rm=TRUE)
+      s = colMads(vec, na.rm = TRUE)
     }       
     if (variability == "iqr") {
-      s = colIQRs(vec, na.rm=TRUE)
+      s = colIQRs(vec, na.rm = TRUE)
     }       
     if (variability == "sd") {
-      s = colSds(vec, na.rm=TRUE)
+      s = colSds(vec, na.rm = TRUE)
     }     
     
     vecc = (t(vec) - m)/s
@@ -283,44 +291,44 @@ zscore_img <- function(img, mask = NULL, margin=3,
                  dim = dim(img))
     imgc = aperm(imgc, revperm)
   } else {
-    mn = do.call(centrality, list(x=c(img), na.rm=TRUE))
+    mn = do.call(centrality, list(x = c(img), na.rm = TRUE))
     if (variability == "iqrdiff") {
-      s = iqrDiff(c(img), na.rm=TRUE)
+      s = iqrDiff(c(img), na.rm = TRUE)
     }
     if (variability == "sd") {
-      s = sd(c(img), na.rm=TRUE)
+      s = sd(c(img), na.rm = TRUE)
     }
     if (variability == "maddiff") {
-      s = madDiff(c(img), na.rm=TRUE)
+      s = madDiff(c(img), na.rm = TRUE)
     }   
     if (variability == "mad") {
-      s = mad(c(img), na.rm=TRUE)
+      s = mad(c(img), na.rm = TRUE)
     }       
     if (variability == "iqr") {
-      s = iqr(c(img), na.rm=TRUE)
+      s = iqr(c(img), na.rm = TRUE)
     }       
     
     imgc = (img - mn) / s
   }
   stopifnot(all.equal(dim(imgc), dim(orig.img)))
-  if (inherits(orig.img, "nifti")){
+  if (inherits(orig.img, "nifti")) {
     nim = orig.img
     nim@.Data = imgc
     imgc = nim
     imgc = datatyper(imgc, 
-                    datatype = convert.datatype()$FLOAT32, 
-                    bitpix = convert.bitpix()$FLOAT32) 
+                     datatype = convert.datatype()$FLOAT32, 
+                     bitpix = convert.bitpix()$FLOAT32) 
   }
-  if (remove.na){
+  if (remove.na) {
     imgc[is.na(imgc)] = remove.val
   }
-  if (remove.nan){
+  if (remove.nan) {
     imgc[is.nan(imgc)] = remove.val
   } 
-  if (remove.inf){
+  if (remove.inf) {
     imgc[is.infinite(imgc)] = remove.val
   }   
-  if (inherits(orig.img, "nifti")){
+  if (inherits(orig.img, "nifti")) {
     imgc = cal_img(imgc)
     imgc = zero_trans(imgc)
   }

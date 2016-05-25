@@ -4,8 +4,9 @@
 #' @name slice_code-methods
 #' @aliases slice_code,character-method
 #' @import oro.nifti
-#' @param object is a filename to pass to \link{fslval}
 #' @export
+#' @description slice_code method for character types
+#' @param object is a filename to pass to \link{fslval}
 #' 
 setMethod("slice_code", "character", function(object) { 
   object = path.expand(object)

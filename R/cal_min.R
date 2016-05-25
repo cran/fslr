@@ -4,8 +4,9 @@
 #' @name cal.min-methods
 #' @aliases cal.min,character-method
 #' @import oro.nifti
-#' @param object is a filename to pass to \link{fslval}
 #' @export
+#' @description cal_min method for character types
+#' @param object is a filename to pass to \link{fslval}
 #' 
 setMethod("cal.min", "character", function(object) { 
   object = path.expand(object)
