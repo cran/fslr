@@ -1,35 +1,49 @@
 #' @name get.fsl
 #' @title Create command declaring FSLDIR
 #' @description Finds the FSLDIR from system environment or \code{getOption("fsl.path")}
-#' for location of FSL fuctions
+#' for location of FSL functions
+#' @param add_bin Should \code{bin} be added to the fsl path? 
+#' All executables are assumed to be in \code{FSLDIR/bin/}.  If not, and 
+#' \code{add_bin = FALSE}, they will be assumed to be in \code{FSLDIR/}.
 #' @note This will use \code{Sys.getenv("FSLDIR")} before \code{getOption("fsl.path")}.
 #' If the directory is not found for FSL in \code{Sys.getenv("FSLDIR")} and 
 #' \code{getOption("fsl.path")}, it will try the default directory \code{/usr/local/fsl}.
 #' @return NULL if FSL in path, or bash code for setting up FSL DIR
 #' @export
-get.fsl = function(){
+get.fsl = function(add_bin = TRUE){
   cmd = NULL
   fsldir = Sys.getenv("FSLDIR")
   if (fsldir == "") {
     fsldir = getOption("fsl.path")
     ## Will try a default directory (/usr/local/fsl) if nothing else
     if (is.null(fsldir)) {
-      def_path = "/usr/local/fsl"
-      if (file.exists(def_path)) {
-        warning("Setting fsl.path to /usr/local/fsl")
-        options(fsl.path = def_path)
-        fsldir = def_path
+      #### adding in "/usr/share/fsl/5.0" for NeuroDeb
+      def_paths = c("/usr/local/fsl", "/usr/share/fsl/5.0")
+      for (def_path in def_paths) {
+        if (file.exists(def_path)) {
+          warning(paste0("Setting fsl.path to ", def_path))
+          options(fsl.path = def_path)
+          fsldir = def_path
+          break;
+        }
       }
     }
+    bin = "bin"
+    bin_app = paste0(bin, "/")
+    if (!add_bin) {
+      bin_app = bin = ""
+    }
+    
     fslout = get.fsloutput()
     shfile = file.path(fsldir, "etc/fslconf/fsl.sh")
     cmd <- paste0("FSLDIR=", shQuote(fsldir), "; ", 
-                  'PATH=${FSLDIR}/bin:${PATH};',
+                  paste0('PATH=${FSLDIR}/', bin, ':${PATH};'),
                   'export PATH FSLDIR; ', 
                   ifelse(file.exists(shfile), 
                          'sh "${FSLDIR}/etc/fslconf/fsl.sh"; ', ""),
                   "FSLOUTPUTTYPE=", fslout, "; export FSLOUTPUTTYPE; ", 
-                  "${FSLDIR}/bin/")
+                  paste0("${FSLDIR}/", bin_app)
+                  )
     fsl_pre = getOption("fsl_pre")
     if (is.null(fsl_pre)) { 
       fsl_pre = "" 
@@ -46,7 +60,7 @@ get.fsl = function(){
 
 #' @title Get FSL's Directory 
 #' @description Finds the FSLDIR from system environment or \code{getOption("fsl.path")}
-#' for location of FSL fuctions and returns it
+#' for location of FSL functions and returns it
 #' @return Character path
 #' @aliases fsl_dir
 #' @export
@@ -68,12 +82,13 @@ fsl_dir = function(){
 #' @title Logical check if FSL is accessible
 #' @description Uses \code{get.fsl} to check if FSLDIR is accessible or the option
 #' \code{fsl.path} is set and returns logical
+#' @param ... options to pass to \code{\link{get.fsl}}
 #' @return Logical TRUE is FSL is accessible, FALSE if not
 #' @export
 #' @examples
 #' have.fsl()
-have.fsl = function(){
-  x = suppressWarnings(try(get.fsl(), silent = TRUE))
+have.fsl = function(...){
+  x = suppressWarnings(try(get.fsl(...), silent = TRUE))
   return(!inherits(x, "try-error"))
 }
 
@@ -227,7 +242,6 @@ fslbin = function(
 #' option 
 #' @param ... options passed to \code{\link{checkimg}}
 #' @return Result of fslstats command
-#' @import stringr
 #' @export
 #' @examples
 #' if (have.fsl()){
@@ -251,7 +265,7 @@ fslstats <- function(file, opts="", verbose = TRUE, ts = FALSE, ...){
   if (verbose) {
     message(cmd, "\n")
   }
-  x = str_trim(system(cmd, intern = TRUE))
+  x = trimws(system(cmd, intern = TRUE))
   return(x)
 }
 
@@ -469,7 +483,6 @@ fslerode <- function(file, outfile=NULL,
 #' @param ... options passed to \code{\link{checkimg}}
 #' @return Character of infromation from fslhd field specified in keyword
 #' @export
-#' @import stringr
 #' @examples
 #' if (have.fsl()){
 #'  mnifile = file.path(fsldir(), "data", "standard", 
@@ -483,7 +496,7 @@ fslval <- function(file, keyword = "", verbose = TRUE, ...){
   if (verbose) {
     message(cmd, "\n")
   }
-  return(str_trim(system(cmd, intern = TRUE)))
+  return(trimws(system(cmd, intern = TRUE)))
 }
 
 #' @title fslval help
@@ -693,7 +706,6 @@ check_sform_file <- function(file, value=0, ...){
 #' option
 #' @param ... options passed to \code{\link{checkimg}}
 #' @return numeric vector of length 2
-#' @import stringr
 #' @export
 #' @examples
 #' if (have.fsl()){
@@ -1481,6 +1493,7 @@ fslcmd = function(
   
   cmd = get.fsl()
   file = checkimg(file, ...)
+  # file = path.expand(file)
   
   ##########################
   # Add frontopts
