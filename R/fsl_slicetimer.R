@@ -18,7 +18,7 @@
 #' @return If \code{retimg} then object of class nifti.  Otherwise,
 #' Result from system command, depends if intern is TRUE or FALSE.
 #' @export
-fsl_slicetimer = function(
+fslslicetimer = function(
   file,
   outfile = NULL, 
   retimg = TRUE,
@@ -73,4 +73,18 @@ fsl_slicetimer = function(
                samefile = FALSE)
   
   return(res)  
+}
+
+#' @rdname fslslicetimer
+#' @aliases fsl_slicetimer
+#' @export
+#' @note Functions with underscores have different defaults
+#' and will return an output filename, so to be used for piping
+fsl_slicetimer = function(
+  ...,
+  outfile = tempfile(fileext = ".nii.gz"),
+  retimg = FALSE
+) {
+  fslslicetimer(..., outfile = outfile, retimg = retimg)
+  return(outfile)
 }

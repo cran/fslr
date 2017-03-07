@@ -71,3 +71,17 @@ fslsplit = function(infile,
 fslsplit.help = function(){
   return(fslhelp("fslsplit", help.arg = ""))
 }
+
+#' @rdname fslsplit
+#' @aliases fsl_split
+#' @param ... not used
+#' @export
+#' @note Functions with underscores have different defaults
+#' and will return an output filename, so to be used for piping
+fsl_split = function(
+  ...,
+  retimg = FALSE
+) {
+  res = fslsplit(..., retimg = retimg)
+  return(res)
+}

@@ -44,7 +44,7 @@ get.fsl = function(add_bin = TRUE){
                          'sh "${FSLDIR}/etc/fslconf/fsl.sh"; ', ""),
                   "FSLOUTPUTTYPE=", fslout, "; export FSLOUTPUTTYPE; ", 
                   paste0("${FSLDIR}/", bin_app)
-                  )
+    )
     fsl_pre = getOption("fsl_pre")
     if (is.null(fsl_pre)) { 
       fsl_pre = "" 
@@ -215,37 +215,6 @@ fslmaths = function(
 }
 
 
-#' @title Binarize Image using FSL 
-#' @description This function calls \code{fslmaths -bin}.  The R functions wraps
-#' \code{fslmaths}
-#' @param file (character) image to be binarized
-#' @param outfile (character) resultant image name (optional)
-#' @param retimg (logical) return image of class nifti
-#' @param reorient (logical) If retimg, should file be reoriented when read in?
-#' Passed to \code{\link{readnii}}.
-#' @param intern (logical) to be passed to \code{\link{system}}
-#' @param opts (character) operations to be passed to \code{fslmaths}
-#' @param ... additional arguments passed to \code{\link{readnii}}.
-#' @return If \code{retimg} then object of class nifti.  Otherwise,
-#' Result from system command, depends if intern is TRUE or FALSE.
-#' @export
-fslbin = function(
-  file,
-  outfile=NULL, 
-  retimg = TRUE,
-  reorient = FALSE,
-  intern = FALSE, 
-  opts = "", 
-  ...){
-  
-  all.opts = paste("-bin ", opts, collapse = " " )
-  res = fslmaths(file = file, outfile = outfile, 
-                 retimg = retimg, reorient = reorient,
-                 intern = intern, opts = all.opts, ...)
-  
-  return(res)  
-}
-
 
 
 
@@ -272,7 +241,7 @@ fslbin = function(
 fslstats <- function(file, opts="", verbose = TRUE, ts = FALSE, ...){
   cmd <- get.fsl()
   file = checkimg(file, ...)
-
+  
   cmd <- paste0(cmd, 
                 sprintf('fslstats %s "%s" %s', 
                         ifelse(ts, "-t", ""), 
@@ -497,7 +466,7 @@ fslerode <- function(file, outfile=NULL,
 #' @param keyword (character) keyword to be taken from fslhd
 #' @param verbose (logical) print out command before running 
 #' @param ... options passed to \code{\link{checkimg}}
-#' @return Character of infromation from fslhd field specified in keyword
+#' @return Character of information from fslhd field specified in keyword
 #' @export
 #' @examples
 #' if (have.fsl()){
@@ -534,7 +503,7 @@ fslval.help = function(){
 #' @param opts (character) additional options to be passed to fslhd
 #' @param verbose (logical) print out command before running 
 #' @param ... options passed to \code{\link{checkimg}}
-#' @return Character of infromation from fslhd
+#' @return Character of information from fslhd
 #' @export
 #' @examples
 #' if (have.fsl()){
@@ -1076,7 +1045,7 @@ flirt = function(infile,
   }
   if (verbose & print.omat) {
     message(paste0("Output matrix not specified, but stored ", 
-               "temporarily at ", omat, "\n"))
+                   "temporarily at ", omat, "\n"))
   }
   return(res)
 }
@@ -1441,6 +1410,8 @@ fslswapdim.help = function(){
 #' @param opts_after_outfile (logical) should \code{opts} come after 
 #' the \code{outfile} in the FSL command?
 #' @param frontopts (character) options/character to put in before filename
+#' @param no.outfile (logical) is there an output file in the arguments of 
+#' the FSL function?
 #' @param ... additional arguments passed to \code{\link{readnii}}.
 #' @return If \code{retimg} then object of class nifti.  Otherwise,
 #' Result from system command, depends if intern is TRUE or FALSE.
@@ -1457,6 +1428,7 @@ fslcmd = function(
   samefile = FALSE,
   opts_after_outfile = FALSE,
   frontopts = "",
+  no.outfile = FALSE,
   ...){
   
   cmd = get.fsl()
@@ -1473,15 +1445,18 @@ fslcmd = function(
   cmd <- paste0(cmd, s)
   # cmd <- paste0(cmd, sprintf('%s "%s"', func, file))
   
-  no.outfile = is.null(outfile)
   if (no.outfile & samefile) outfile = ""  
   outfile = check_outfile(outfile = outfile, 
                           retimg = retimg, fileext = "")
   outfile = nii.stub(outfile)
-  if (!opts_after_outfile) {
-    cmd <- paste(cmd, sprintf(' %s "%s";', opts, outfile))
+  if (no.outfile) {
+    cmd <- paste(cmd, sprintf(' %s ;', opts))
   } else {
-    cmd <- paste(cmd, sprintf(' "%s" %s;', outfile, opts))
+    if (!opts_after_outfile) {
+      cmd <- paste(cmd, sprintf(' %s "%s";', opts, outfile))
+    } else {
+      cmd <- paste(cmd, sprintf(' "%s" %s;', outfile, opts))
+    }
   }
   ext = get.imgext()
   if (verbose) {

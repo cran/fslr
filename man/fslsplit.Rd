@@ -2,10 +2,13 @@
 % Please edit documentation in R/fslsplit.R
 \name{fslsplit}
 \alias{fslsplit}
+\alias{fsl_split}
 \title{Split images using FSL}
 \usage{
 fslsplit(infile, direction = c("t", "x", "y", "z"), output_basename = NULL,
   retimg = TRUE, reorient = FALSE, verbose = TRUE)
+
+fsl_split(..., retimg = FALSE)
 }
 \arguments{
 \item{infile}{(character) input filename}
@@ -20,6 +23,8 @@ fslsplit(infile, direction = c("t", "x", "y", "z"), output_basename = NULL,
 Passed to \code{\link{readnii}}.}
 
 \item{verbose}{(logical) print out command before running}
+
+\item{...}{not used}
 }
 \value{
 List of output files
@@ -28,4 +33,7 @@ List of output files
 This function calls \code{fslsplit} to merge files on some dimension
 and either saves the image or returns an object of class nifti
 }
-
+\note{
+Functions with underscores have different defaults
+and will return an output filename, so to be used for piping
+}
