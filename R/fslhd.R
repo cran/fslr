@@ -28,6 +28,12 @@ get.fsl = function(add_bin = TRUE){
           break;
         }
       }
+    } else {
+      if (!file.exists(fsldir)) {
+        warning(paste0("fsl.path set but folder doesn't exist! ", 
+                       "Likely mis-configured option"))
+      }
+      
     }
     bin = "bin"
     bin_app = paste0(bin, "/")
@@ -261,11 +267,14 @@ fslstats <- function(file, opts="", verbose = TRUE, ts = FALSE, ...){
 #' @title Gaussian smooth image using FSL
 #' @description This function calls \code{fslmaths -s} to smooth an image and either
 #' saves the image or returns an object of class nifti
-#' @param file (character) image to be smoothed
+#' @param file (character or nifti) image to be smoothed
 #' @param sigma (numeric) sigma (in mm) of Gaussian kernel for smoothing
 #' @param mask (character) optional mask given for image
 #' @param smooth_mask (logical) Smooth mask?  If TRUE, the masked image 
 #' will be divided by the smoothed mask.
+#' @param smoothed_mask (character or nifti) If specified and 
+#' \code{smooth_mask = TRUE}, then will use this as the smoothed mask for 
+#' division.
 #' @param outfile (character) resultant smoothed image name (optional)
 #' if not give, will be the stub of the filename then _sigma
 #' @param retimg (logical) return image of class nifti
@@ -292,6 +301,7 @@ fslsmooth <- function(
   sigma=10, 
   mask=NULL, 
   smooth_mask = TRUE,
+  smoothed_mask = NULL,
   outfile=NULL, 
   retimg = TRUE,
   reorient = FALSE,
@@ -302,6 +312,7 @@ fslsmooth <- function(
   leader = cmd = get.fsl()
   file = checkimg(file, ...)
   cmd <- paste0(cmd, sprintf('fslmaths "%s"', file))
+  
   if ( !is.null(mask)) {
     mask = checkimg(mask, ...)
     cmd <- paste(cmd, sprintf(' -mas "%s"', mask))
@@ -312,31 +323,29 @@ fslsmooth <- function(
   cmd <- paste(cmd, sprintf(' -s %s "%s";', sigma, outfile))
   ext = get.imgext()
   
-  rm.mask.img = FALSE
   ### tempfile for mask.stub
   if ( !is.null(mask) & smooth_mask ) {
-    rm.mask.img = TRUE
-    mask = checkimg(mask, ...)
-    mask.stub <- basename(mask)
-    mask.stub = nii.stub(mask.stub)
-    mask.stub <- file.path(dirname(mask), mask.stub)
-    mask.blur <- sprintf("%s_%s", mask.stub, sigma)
-    cmd <- paste(cmd, paste0(leader, 
-                             sprintf('fslmaths "%s" -s %s "%s";', 
-                                     mask, sigma, mask.blur)))
-    cmd <- paste(cmd, paste0(leader, 
-                             sprintf('fslmaths "%s" -div "%s" -mas "%s" "%s";', 
-                                     outfile, mask.blur, mask, outfile)))
+    if (is.null(smoothed_mask)) {
+      smoothed_mask = tempfile(fileext = ".nii.gz")
+      cmd <- paste(
+        cmd, 
+        paste0(leader, 
+               sprintf('fslmaths "%s" -s %s "%s";', 
+                       mask, sigma, smoothed_mask)))
+    } else {
+      smoothed_mask = checkimg(smoothed_mask, ...)
+    }
+    cmd <- paste(
+      cmd, paste0(leader, 
+                  sprintf('fslmaths "%s" -div "%s" -mas "%s" "%s";', 
+                          outfile, smoothed_mask, mask, outfile)))    
   }
   if (verbose) {
     message(cmd, "\n")
   }  
   res = system(cmd, intern = intern)
   outfile = paste0(outfile, ext)  
-  if (rm.mask.img) {
-    file.remove(paste0(mask.blur, ext))    
-  }
-  
+
   if (retimg) {
     img = readnii(outfile, reorient = reorient, ...)
     return(img)
@@ -514,6 +523,9 @@ fslval.help = function(){
 fslhd <- function(file, opts="", verbose = TRUE, ...){
   cmd <- get.fsl()
   file = checkimg(file, ...)
+  if (!file.exists(file)) {
+    stop(paste0("File ", file, " does not exist!"))
+  }  
   cmd <- paste0(cmd, sprintf('fslhd "%s" %s', file, opts))
   if (verbose) {
     message(cmd, "\n")
@@ -575,6 +587,7 @@ fslhd.parse <- function(hd){
 #' @description This function obtains the s and q forms of an image transformation 
 #' matrix
 #' @param file (character) filename of image to pass to header
+#' @param verbose (logical) passed to \code{\link{fslhd}}
 #' @param ... options passed to \code{\link{checkimg}}
 #' @return list with elements of sform and qform and their respective codes
 #' @export
@@ -584,9 +597,11 @@ fslhd.parse <- function(hd){
 #'    "MNI152_T1_2mm.nii.gz")
 #'  getForms(mnifile)
 #' }   
-getForms <- function(file, ...){
+getForms <- function(file, 
+                     verbose = FALSE,
+                     ...){
   file = checkimg(file, ...)  
-  x <- fslhd(file)
+  x <- fslhd(file, verbose = verbose)
   convmat <- function(form){
     ss <- strsplit(form, " ")
     ss <- t(sapply(ss, function(x) x[ x != "" ]))
@@ -656,6 +671,7 @@ checkout <- function(hd){
 #' @return result of \code{\link{checkout}}
 #' @export
 #' @examples
+#' library(fslr)
 #' if (have.fsl()){
 #'  mnifile = file.path(fsldir(), "data", "standard", 
 #'    "MNI152_T1_2mm.nii.gz")
@@ -878,54 +894,6 @@ fslsub2 = function(file,
   #     return(img)
   #   }
   return(res)
-}
-
-#' @title Open image in FSLView
-#' @description This function calls \code{fslview} to view an image 
-#' in the FSL viewer
-#' @param file (character) filename of image to be thresholded
-#' @param intern (logical) pass to \code{\link{system}}
-#' @param opts (character) options for FSLView
-#' @param verbose (logical) print out command before running
-#' @param ... options passed to \code{\link{checkimg}}
-#' @return character or logical depending on intern
-#' @export
-fslview = function(file, intern=TRUE, opts ="", verbose = TRUE, ...){
-  cmd <- get.fsl()
-  if (is.nifti(file)) {
-    file = checkimg(file)
-  }
-  file = lapply(file, checkimg, ...)
-  if (length(file) != length(opts)) {
-    opts = rep(opts, length = length(file))
-  } else {
-    if (length(file) > length(opts)) {
-      opts = c(opts, rep("", length = (length(file) - length(opts))))
-    } else {
-      opts = opts[seq(length(file))]
-    }
-  }
-  file = shQuote(file)
-  file = paste(file, opts)
-  file = paste(file, collapse = " ")
-  cmd <- paste0(cmd, sprintf('fslview %s', file))
-  if (verbose) {
-    message(cmd, "\n")
-  }
-  res = system(cmd, intern = intern)
-  return(res)
-}
-
-#' @title FSLView help
-#' @description This function calls \code{fslview}'s help
-#' @return Prints help output and returns output as character vector
-#' @export
-#' @examples
-#' if (have.fsl()){
-#'  fslview.help()
-#' }   
-fslview.help = function(){
-  return(fslhelp("fslview"))
 }
 
 #' @title Merge images using FSL

@@ -2,16 +2,26 @@
 % Please edit documentation in R/fast.R
 \name{fast}
 \alias{fast}
+\alias{fsl_fast}
+\alias{fslfast}
 \title{FSL FAST}
 \usage{
-fast(file, outfile = NULL, retimg = TRUE, reorient = FALSE,
-  intern = FALSE, opts = "", out_type = c("seg", "mixeltype", "pve_0",
-  "pve_1", "pve_2", "pveseg"), verbose = TRUE, ...)
+fast(file, outfile = NULL, bias_correct = TRUE, retimg = TRUE,
+  reorient = FALSE, intern = FALSE, opts = "", out_type = c("seg",
+  "mixeltype", "pve_0", "pve_1", "pve_2", "pveseg"), verbose = TRUE, ...)
+
+fsl_fast(..., outfile = tempfile(fileext = ".nii.gz"), retimg = FALSE)
+
+fslfast(...)
 }
 \arguments{
 \item{file}{(character) image to be manipulated}
 
 \item{outfile}{(character) resultant image name (optional)}
+
+\item{bias_correct}{(logical) if \code{FALSE}, then 
+\code{"--nobias"} is passed to FAST.  Additional options can be 
+sent using \code{opts}, but this is the most commonly one changed.}
 
 \item{retimg}{(logical) return image of class nifti}
 
@@ -35,4 +45,8 @@ Result from system command, depends if intern is TRUE or FALSE.
 }
 \description{
 This function calls \code{fast} from FSL
+}
+\note{
+Functions with underscores have different defaults
+and will return an output filename, so to be used for piping
 }

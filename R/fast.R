@@ -2,6 +2,9 @@
 #' @description This function calls \code{fast} from FSL
 #' @param file (character) image to be manipulated
 #' @param outfile (character) resultant image name (optional)
+#' @param bias_correct (logical) if \code{FALSE}, then 
+#' \code{"--nobias"} is passed to FAST.  Additional options can be 
+#' sent using \code{opts}, but this is the most commonly one changed.
 #' @param retimg (logical) return image of class nifti
 #' @param reorient (logical) If retimg, should file be reoriented when read in?
 #' Passed to \code{\link{readnii}}.
@@ -17,6 +20,7 @@
 fast = function(
   file,
   outfile=NULL, 
+  bias_correct = TRUE,
   retimg = TRUE,
   reorient = FALSE,
   intern=FALSE, 
@@ -32,7 +36,17 @@ fast = function(
   no.outfile = is.null(outfile)
   outfile = check_outfile(outfile=outfile, retimg=retimg, fileext = "")
   outfile = nii.stub(outfile)
-  cmd <- paste(cmd, sprintf(' %s --out="%s" "%s";', opts, 
+  if (!bias_correct) {
+    opts = c(opts, "--nobias")
+  }
+  if (verbose) {
+    opts = c(opts, "--verbose")
+  }
+  opts = trimws(opts)
+  opts = opts[ opts != "" ]
+  opts = paste(opts, collapse = " ")
+  
+  cmd <- paste(cmd, sprintf('%s --out="%s" "%s";', opts, 
     outfile, file))
   ext = get.imgext()
   if (verbose){
@@ -65,7 +79,7 @@ fast.help = function(){
 
 #' @title FSL Bias Correct
 #' @description This function wraps a call to \code{fast} that performs bias
-#' corretion
+#' correction
 #' @param file (character) image to be manipulated
 #' @param outfile (character) resultant image name (optional)
 #' @param retimg (logical) return image of class nifti
@@ -127,3 +141,27 @@ fsl_biascorrect = function(
   return(res)  
 }
 
+
+
+#' @rdname fast
+#' @aliases fsl_fast
+#' @export
+#' @note Functions with underscores have different defaults
+#' and will return an output filename, so to be used for piping
+fsl_fast = function(
+  ...,
+  outfile = tempfile(fileext = ".nii.gz"),
+  retimg = FALSE
+) {
+  fast(..., outfile = outfile, retimg = retimg)
+  return(outfile)
+}
+
+#' @rdname fast
+#' @aliases fslfast
+#' @export
+fslfast = function(
+  ...
+) {
+  fast(...)
+}

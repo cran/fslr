@@ -11,3 +11,4 @@ fsl_mul = function(
   fslmul(..., outfile = outfile, retimg = retimg)
   return(outfile)
 }
+

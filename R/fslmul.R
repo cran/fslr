@@ -1,4 +1,3 @@
-
 #' @title Multiply Images using FSL 
 #' @description This function calls \code{fslmaths -mul}.  
 #' The R functions wraps \code{fslmaths}
@@ -35,3 +34,5 @@ fslmul = function(
   
   return(res)  
 }
+
+

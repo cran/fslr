@@ -1,7 +1,8 @@
 #' @title topup - calling FSL topup
-#' @description A tool for estimating and correcting susceptibility induced distortions
+#' @description A tool for estimating and correcting susceptibility 
+#' induced distortions
 #' 
-#' @param imain name of 4D file with images
+#' @param infile name of 4D file with images
 #' @param datain name of text file with PE directions/times
 #' @param out base-name of output files (spline coefficients (Hz) and 
 #' movement parameters)
@@ -15,7 +16,7 @@
 #' @param config Name of config file specifying command line arguments
 #' @param miter Max # of non-linear iterations, default 5
 #' @param lambda Weight of regularisation, default depending on 
-#' \code{ssqlambda} and \code{regmod} switches. See user documetation.
+#' \code{ssqlambda} and \code{regmod} switches. See user documentation.
 #' @param ssqlambda If set (=1), lambda is weighted by current ssq, default 1
 #' @param regmod Model for regularisation of warp-field 
 #' [membrane_energy bending_energy], default bending_energy
@@ -31,9 +32,9 @@
 #' common mean, default 0 (false)
 #' @param regrid If set (=1), the calculations are done in a different 
 #' grid, default 1 (true)
-#' @param verbose Print diagonostic information while running
+#' @param verbose Print diagnostic information while running
 topup = function(
-  imain, 
+  infile, 
   datain, 
   out = NULL, 
   fout = NULL, 
@@ -107,10 +108,14 @@ topup = function(
   
   cmd = get.fsl()
   cmd = paste0(cmd, "topup")
-  imain = normalizePath(imain)
-  datain = normalizePath(datain)
+  infile = checkimg(infile)
+  infile = unname(infile)
+  infile = normalizePath(infile)
   
-  args = paste0("--imain=", imain, " --datain=", datain)
+  datain = normalizePath(datain)
+  datain = unname(datain)
+  
+  args = paste0("--infile=", infile, " --datain=", datain)
   cmd = paste(cmd, args, opts)
   
   if (verbose) {
