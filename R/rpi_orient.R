@@ -1,3 +1,25 @@
+
+.orient_file = function(file, verbose = TRUE){
+  file = checkimg(file)
+  forms = getForms(file, verbose = verbose)
+  if (forms$sform_code == 0 & forms$qform_code == 0) {
+    stop("Cannot swap dimensions - sform_code and qform_code are 0!")
+  }
+  if (forms$sform_code != 0 & forms$qform_code != 0) {
+    if (!all(forms$ssor == forms$sqor)) {
+      warning(paste0("sform and qform are set, but the orientation ", 
+                     "is not the same, using sform"))
+    }
+  }  
+  if (forms$sform_code != 0) {
+    sorient = forms$ssor
+  } else {
+    sorient = forms$sqor
+  }
+  L = list(file = file, orientation = sorient)
+  return(L)
+}
+
 #' @title Reorient an Image to RPI orientation
 #' @description This function uses \code{fslswapdim} to reorient an image
 #' @param file Object of class \code{nifti} or character path
@@ -19,21 +41,9 @@ rpi_orient = function(file, verbose = TRUE){
 #' @rdname rpi_orient
 rpi_orient_file = function(file, verbose = TRUE){
   file = checkimg(file)
-  forms = getForms(file, verbose = verbose)
-  if (forms$sform_code == 0 & forms$qform_code == 0) {
-    stop("Cannot swap dimensions - sform_code and qform_code are 0!")
-  }
-  if (forms$sform_code != 0 & forms$qform_code != 0) {
-    if (!all(forms$ssor == forms$sqor)) {
-      warning(paste0("sform and qform are set, but the orientation ", 
-                     "is not the same, using sform"))
-    }
-  }  
-  if (forms$sform_code != 0) {
-    sorient = forms$ssor
-  } else {
-    sorient = forms$sqor
-  }
+  L = .orient_file(file = file, verbose = verbose)
+  file = L$file
+  sorient = L$orientation
   ori = fslgetorient(file, verbose = verbose)
   if (ori == "NEUROLOGICAL") {
     # need to copy because fslorient samefile stuff
@@ -43,10 +53,12 @@ rpi_orient_file = function(file, verbose = TRUE){
                       basename(file))
     file.copy(file, tfile, overwrite = TRUE)
     # changes from NEUROLOGICAL to RADIOLOGICAL
-    file = fslorient(tfile,
-                     opts = "-swaporient",
-                     retimg = TRUE,
-                     verbose = verbose)
+    fslorient(tfile,
+              opts = "-swaporient",
+              retimg = FALSE,
+              outfile = tfile,
+              verbose = verbose)
+    file = tfile
   }
   outfile = tempfile(fileext = ".nii.gz")
   # Changes the data
@@ -74,7 +86,7 @@ reverse_rpi_orient = function(file,
                               convention = c("NEUROLOGICAL", "RADIOLOGICAL"), 
                               orientation, verbose = TRUE){
   img = reverse_rpi_orient_file(file = file, convention = convention,
-                      orientation = orientation, verbose = verbose)
+                                orientation = orientation, verbose = verbose)
   img = check_nifti(img)
   return(img)
 }
@@ -92,13 +104,14 @@ reverse_rpi_orient_file = function(
   
   outfile = tempfile(fileext = ".nii.gz")
   if (convention == "NEUROLOGICAL") {   
-    fslorient(file, 
+    file.copy(file, outfile)
+    fslorient(outfile, 
               opts = "-swaporient",
               retimg = FALSE, 
-              verbose = verbose,
-              outfile = outfile)   
+              verbose = verbose)   
     file = outfile
-  }
+    outfile = tempfile(fileext = ".nii.gz")    
+  }  
   fslswapdim(file = file, 
              a = orientation[1], 
              b = orientation[2], 
@@ -106,5 +119,23 @@ reverse_rpi_orient_file = function(
              verbose = verbose,
              retimg = FALSE,
              outfile = outfile)
+
   return(outfile)
 }
+
+#' @export
+#' @rdname rpi_orient
+is_rpi = function(file, verbose = FALSE) {
+  file = checkimg(file)
+  L = .orient_file(file = file, verbose = verbose)
+  file = L$file
+  sorient = L$orientation
+  orient = paste0(substr(sorient, 1, 1), collapse = "")
+  ori = fslgetorient(file, verbose = verbose)
+  res = ori == "RADIOLOGICAL" && orient == "RPI"
+  return(res)
+}
+
+#' @export
+#' @rdname rpi_orient
+is.rpi = is_rpi

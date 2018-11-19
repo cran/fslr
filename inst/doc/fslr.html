@@ -20,7 +20,7 @@
 <style type="text/css">
 a.sourceLine { display: inline-block; line-height: 1.25; }
 a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; position: absolute; }
+a.sourceLine:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode { white-space: pre; position: relative; }
 div.sourceCode { margin: 1em 0; }
@@ -33,13 +33,11 @@ code.sourceCode { white-space: pre-wrap; }
 a.sourceLine { text-indent: -1em; padding-left: 1em; }
 }
 pre.numberSource a.sourceLine
-  { position: relative; }
-pre.numberSource a.sourceLine:empty
-  { position: absolute; }
+  { position: relative; left: -4em; }
 pre.numberSource a.sourceLine::before
   { content: attr(data-line-number);
-    position: absolute; left: -5em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all;
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -280,31 +278,31 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 
 
-<section id="reading-in-data" class="level2">
+<div id="reading-in-data" class="section level2">
 <h2>Reading in Data</h2>
 <p><code>fslr</code> implicitly is partnered with the <code>nifti</code> format from <code>oro.nifti</code>. All functions use the <code>system</code> command to implement the FSL functions. All functions will check to see whether the file passed in a character path to a filename. If the object is a <code>nifti</code> object, the programs will create a temporary file using <code>tempfile()</code> and then return the name of this file with the <code>checkimg</code> command. If a character path is passed to the <code>file</code> argument into an <code>fslr</code> command, then this will run in FSL assuming that file exists.</p>
-</section>
-<section id="checking-if-fsl-exists" class="level2">
+</div>
+<div id="checking-if-fsl-exists" class="section level2">
 <h2>Checking if FSL exists</h2>
 <p>If <code>R</code> is run using a GUI, then <code>fsl.path</code> must be set using <code>options(fsl.path='/path/to/fsl')</code>. <code>have.fsl()</code> checks to see if FSL is in the PATH or the options are correctly set and returns <code>TRUE</code> and returns <code>FALSE</code> otherwise.</p>
-<section id="printing-out-fsl-version" class="level3">
+<div id="printing-out-fsl-version" class="section level3">
 <h3>Printing out FSL Version</h3>
 <p>For example, you can wrap example functions with a logical check for <code>have.fsl()</code> to have the execute if FSL exists:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="cf">if</span> (<span class="kw">have.fsl</span>()) {</a>
 <a class="sourceLine" id="cb1-2" data-line-number="2">  <span class="kw">print</span>(<span class="kw">fsl_version</span>())</a>
 <a class="sourceLine" id="cb1-3" data-line-number="3">}</a></code></pre></div>
 <pre><code>## [1] &quot;5.0.10&quot;</code></pre>
-</section>
-</section>
-<section id="returning-objects" class="level2">
+</div>
+</div>
+<div id="returning-objects" class="section level2">
 <h2>Returning Objects</h2>
 <p>In functions where an image is the end result, the <code>outfile</code> and <code>retimg</code> arguments are present. If <code>outfile</code> is specified, the user wants a file to be saved to disk. If <code>outfile</code> is not specified, a temporary file (using <code>tempfile</code>) will be created for the result and deleted at the end of the <code>R</code> session. If <code>retimg=TRUE</code>, then the user specified that an object of class <code>nifti</code> will be returned to <code>R</code>. If both <code>retimg=TRUE</code> and <code>outfile</code> is specified, the image will be written to disk, read into <code>R</code> and the <code>nifti</code> object will be returned. If <code>retimg=FALSE</code> and <code>outfile</code> is not specified, the function will fail as <code>fslr</code> would be calculating an image and no result would be able to be obtained since the <code>outfile</code> is deleted.</p>
-</section>
-<section id="main-functions" class="level2">
+</div>
+<div id="main-functions" class="section level2">
 <h2>Main functions</h2>
 <p>The main functions implemented are <code>fslmaths</code> and <code>fslstats</code>. <code>fslmaths</code> usually returns images as the result and <code>fslstats</code> usually returns a vector of information.</p>
 <p>Functions functions such as <code>fslmask</code>, <code>fslerode</code>, <code>fslsmooth</code>, and <code>fslfill</code> are implemented wrappers for ease of use, but are essentially calling <code>fslmaths</code> with specific options. Functions such as <code>fslrange</code> is an example of a wrapper for <code>fslstats</code>. As <code>fslstats</code> outputs are variable in their format, the results are returned simply as a character vector which needs to be parsed. <a href="https://github.com/muschellij2/fslr">This GitHub repository</a> will be used for development and issues.</p>
-</section>
+</div>
 
 
 

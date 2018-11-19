@@ -42,12 +42,16 @@ get.fsl = function(add_bin = TRUE){
     }
     
     fslout = get.fsloutput()
+    ld_dir = "/usr/lib/fsl/5.0"
     shfile = file.path(fsldir, "etc/fslconf/fsl.sh")
     cmd <- paste0("FSLDIR=", shQuote(fsldir), "; ", 
                   paste0('PATH=${FSLDIR}/', bin, ':${PATH};'),
                   'export PATH FSLDIR; ', 
                   ifelse(file.exists(shfile), 
                          'sh "${FSLDIR}/etc/fslconf/fsl.sh"; ', ""),
+                  ifelse(dir.exists(ld_dir),
+                      paste0('export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}":',
+                             ld_dir, ";"), ""),
                   "FSLOUTPUTTYPE=", fslout, "; export FSLOUTPUTTYPE; ", 
                   paste0("${FSLDIR}/", bin_app)
     )
@@ -118,7 +122,7 @@ have_fsl = function(...){
 #' @title Determine FSL output type
 #' @description Finds the FSLOUTPUTTYPE from system environment or 
 #' \code{getOption("fsl.outputtype")} for output type (nii.gz, nii, ANALYZE,etc) 
-#' @return FSLOUTPUTTYPE, such as NIFTI_GZ.  If none found, uses NIFTI_GZ as default
+#' @return FSLOUTPUTTYPE, such as \code{NIFTI_GZ}.  If none found, uses NIFTI_GZ as default
 #' 
 #' @export
 get.fsloutput = function(){
@@ -513,6 +517,11 @@ fslval.help = function(){
 #' @param verbose (logical) print out command before running 
 #' @param ... options passed to \code{\link{checkimg}}
 #' @return Character of information from fslhd
+#' 
+#' @import R.utils
+#' @import graphics
+#' @import grDevices
+#' @import stats
 #' @export
 #' @examples
 #' if (have.fsl()){
@@ -1380,6 +1389,8 @@ fslswapdim.help = function(){
 #' @param frontopts (character) options/character to put in before filename
 #' @param no.outfile (logical) is there an output file in the arguments of 
 #' the FSL function?
+#' @param trim_front trim the whitespace from the front of the command.
+#' @param run (logical) Should the command just be printed (if \code{FALSE})?
 #' @param ... additional arguments passed to \code{\link{readnii}}.
 #' @return If \code{retimg} then object of class nifti.  Otherwise,
 #' Result from system command, depends if intern is TRUE or FALSE.
@@ -1397,6 +1408,8 @@ fslcmd = function(
   opts_after_outfile = FALSE,
   frontopts = "",
   no.outfile = FALSE,
+  trim_front = FALSE,
+  run = TRUE,
   ...){
   
   cmd = get.fsl()
@@ -1406,10 +1419,17 @@ fslcmd = function(
   ##########################
   # Add frontopts
   ##########################
+  frontopts = paste(frontopts, collapse = " ")
+  
   s = sprintf('%s %s ', func, frontopts)
   s = gsub("\\s\\s+", " ", s)
   s = sub("[ \t\r\n]+$", "", s, perl = TRUE)
-  s = paste(s, sprintf('"%s"', file))
+  if (trim_front) {
+    s = trimws(s)
+    s = paste0(s, sprintf('"%s"', file))
+  } else {
+    s = paste(s, sprintf('"%s"', file))
+  }
   cmd <- paste0(cmd, s)
   # cmd <- paste0(cmd, sprintf('%s "%s"', func, file))
   
@@ -1417,6 +1437,8 @@ fslcmd = function(
   outfile = check_outfile(outfile = outfile, 
                           retimg = retimg, fileext = "")
   outfile = nii.stub(outfile)
+  
+  opts = paste(opts, collapse = " ")
   if (no.outfile) {
     cmd <- paste(cmd, sprintf(' %s ;', opts))
   } else {
@@ -1430,13 +1452,18 @@ fslcmd = function(
   if (verbose) {
     message(cmd, "\n")
   }
+  if (!run) {
+    return(cmd)
+  }
   res = system(cmd, intern = intern)
   outfile = paste0(outfile, ext)  
   if (retimg) {
     if (samefile) outfile = file
     img = readnii(outfile, reorient = reorient, ...)
+    attr(img, "result") = res
     return(img)
   } 
+  attr(outfile, "result") = res
   
-  return(res)  
+  return(outfile)  
 }
