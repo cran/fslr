@@ -1,6 +1,6 @@
-4edda939a2298e00af1bb1990cff637c *DESCRIPTION
-9a47613c986ea4907663b29173ac2438 *NAMESPACE
-7ad5298bfe53e0ed1319a19f5208ac81 *NEWS.md
+2712f51cc31ce9119d7fe6110c0fd1d0 *DESCRIPTION
+3b7668f33ee2d7bc45c66ae74db9c84d *NAMESPACE
+53d0ea91fb95c34f4d4e9cee77f9bc63 *NEWS.md
 86d4223141a266643da14d4ebad99d4a *R/applytopup.R
 f87c0a6e96b8bef78116bd7a0ff3cad2 *R/applywarp.R
 14cae7c36cc95aad54de34067637cff4 *R/aux_file.R
@@ -18,8 +18,9 @@ a479b8f5603e279af7ab70e5b98d8fa2 *R/eddy.R
 a3817a12f97ff9a74f69d57a22893245 *R/eddy_correct.R
 40c58c2fd25f41e7699f6c08e5525bbc *R/enforce_form.R
 7f7dbe6a30e0204afcdf5c032aebfe5d *R/epi_reg.R
+c8933c4f44174f0d85bcf3e54ae0cdb6 *R/face_removal_mask.R
 7e9ad90a79ac2145ac2a131cc0680276 *R/fast.R
-0163b1b7f364579e71884476a6c219d6 *R/flirt_apply.R
+924a96bfd8d14301ac845098f83dea61 *R/flirt_apply.R
 a2757e623fba0120c5522ed070207712 *R/fnirt.R
 e6595476a83f4f17d2a4687a284e3192 *R/fsl_abs.R
 0b3d94305eb9db558ad2e90d0e4ba8d6 *R/fsl_acos.R
@@ -97,7 +98,7 @@ a15518dad34fabb8f8d0434a65308900 *R/fslentropy.R
 ed7c19def197e0574e3e8f1facdeadcc *R/fslfill.help.R
 367dc19be6cd0edd07a3a5d222e5444e *R/fslfill2.R
 cf065571c3306276ecbd9bb50322be0a *R/fslgetorient.R
-ace6e489df29e4a10c50b8102fcd2db7 *R/fslhd.R
+5c679b2685135538e6f6b025d60f80ec *R/fslhd.R
 3db125376fd78fbe7c51730459662094 *R/fslindex.R
 e1f7ab5ebb822b35407f3deddd3a6ed1 *R/fslindex.help.R
 e066774489053923542c98f5fdce6ae9 *R/fsllog.R
@@ -139,7 +140,7 @@ ef13b4fb0c278bda4c432368620c0236 *R/fslsum.R
 9e8e1d930718ab982df77be7e8843315 *R/fsltan.R
 9bd20b7ee410fe632e77c9b931d651a4 *R/fsltan.help.R
 285d514e6e7d59b096941f402b73e303 *R/fslthresh.help.R
-eedb15276084663af44151932aed5f8f *R/fslview.R
+88460777e86fcd7c5887c887f7516e35 *R/fslview.R
 8b825fa58c67392bb0a5235d50fea8e8 *R/fslvol.R
 adef86164e3cd6588a64368896cb5ff8 *R/fslvolume.R
 50c687f6159c44c19a9bbd9c35918c92 *R/fslxor.R
@@ -152,7 +153,7 @@ a9f1b09552ba1be1afd2816ba79ceac0 *R/intent_p1.R
 d386df885ffe162d810318591181aaba *R/magic.R
 ff81799b98724a74e7d74b87fd840c60 *R/mcflirt.R
 61217880c7aff9d3bc73650bb54400b9 *R/mid_sagittal_align.R
-06731b1fcee1d28fbbea787db83aa5ab *R/mni_fname.R
+71cceba6b1ab7f9d1d397665c872382b *R/mni_fname.R
 b2deebb2e4d5c5b565b41bd9be28807e *R/pixdim.R
 579a09f866585562a1a658ff3e90594b *R/probtrackx.R
 81ee7feea1e20c96eb965e5e97f8e26c *R/qform.R
@@ -175,14 +176,17 @@ ecffcc8abe1cf1f6e93166be3d67239d *R/toffset.R
 3a4f484204026d9a698f9acf8fc0f26e *R/vox_offset.R
 5fd21bf907b04cd86eabf4eb3036392f *R/xfibres.R
 67dfc03b1949632e949b7d66b84a5b93 *R/zzz.R
-cc27c1e7ac27668cab0ac3c72beecf3f *build/vignette.rds
+fbd4f5ac30e732c66b48bfe1d438541d *build/vignette.rds
 4a53a994d5e38c06eb3f531d25dc9a9b *inst/CITATION
 8f3a87f5df67d098f6c9546b351e6947 *inst/doc/dti_data.R
 f813025c2bb6ac0b64c68fd86dad7692 *inst/doc/dti_data.Rmd
-50cacb14e0d106ac53fff6c8a7a795b5 *inst/doc/dti_data.html
+7bac91b7a55a88cc9dbaf83a075477d6 *inst/doc/dti_data.html
 2713083c767666e98e615e42c59ff7e0 *inst/doc/fslr.R
 8c66b7698a69920369a9723423756e79 *inst/doc/fslr.Rmd
-186eee1e3c4e31001a01d70c68f3fff1 *inst/doc/fslr.html
+7e8c9e63a780b5e9775ca68468e34134 *inst/doc/fslr.html
+62a28697c276aa38470a3a3655b0db5a *inst/extdata/MNI152_T1_0.5mm_facemask.nii.gz
+fdf15402167ad7a367b12077a87458d4 *inst/extdata/MNI152_T1_1mm_facemask.nii.gz
+65d76ceeb9170713f90ccc70d3d5d3c6 *inst/extdata/MNI152_T1_2mm_facemask.nii.gz
 1c0b39712bfe713d02e61817ab0eceb9 *man/applytopup.Rd
 cffc15d330ef94480c6e59cca62f7f53 *man/aux_file-methods.Rd
 9fbb1b1ae0135b34f18dfd9eea5878fd *man/bitpix-methods.Rd
@@ -199,6 +203,7 @@ ee3c47e0e9d80340dfe6961e5e0d05c4 *man/dtifit.Rd
 7387e6b36ffc692252bbcea932266b10 *man/eddy.Rd
 834ac73afb1d77ebdb5b0db0af409349 *man/eddy_correct.Rd
 df2be8932853c30e3d8cd5351f068765 *man/enforce_form.Rd
+2f7e9033d054f36719ad6297d22717aa *man/face_removal_mask.Rd
 b1f0a57c80a696d5f7f26377f824c0bd *man/fast.Rd
 426c7a1c57739f3fa0dbd367348ab7c6 *man/fast.help.Rd
 35b307f9c17a9cd9d8e03a716208f2c9 *man/flirt.Rd
@@ -333,7 +338,7 @@ e6705559bb3b19032d663745a22353d5 *man/fslswapdim.Rd
 872e173f88e335c4f5ef53e1aade0162 *man/fslval.Rd
 ba5c10b2f0ee82e0793359c6fc3d0480 *man/fslval.help.Rd
 274969ce83e75d7db26793433dd1f700 *man/fslview.Rd
-aa2c73958dbceb7db10c3147bc158c58 *man/fslview.help.Rd
+0a7d9f6e4755d54c196bfebd33572a82 *man/fslview.help.Rd
 df7308ff5e7785d1dabf1ea05c1bb6c1 *man/fslvol.Rd
 f5d559ddc1324ad806ec46307206b8f4 *man/fslvolume.Rd
 c1703634bd47076f818c209c82e0c460 *man/fslxor.Rd
@@ -353,7 +358,7 @@ e3cea9226d9f6bb25dd9d4eae35d74af *man/mcflirt.help.Rd
 d7cbd904c8eed383d946d485dee44e77 *man/melodic.Rd
 d236aae12d0a243cc5bf034dbbb83b7f *man/melodic.help.Rd
 5cad5da5b485c2769e3ef8ff0dd37c0f *man/mid_sagittal_align.Rd
-bb73e8bfe87c3e7817182809b4c0a0a7 *man/mni_fname.Rd
+6fdf6d9b4390f1997e9126ecfeef7c7e *man/mni_fname.Rd
 dbd2cf3c6e1968e0f958b1f029041ff9 *man/mni_img.Rd
 c390c7af4650368bb948c655584d3cd0 *man/orientation-methods.Rd
 113c493221c53f512116f8a5f02f4e77 *man/parse_avscale.Rd

@@ -353,9 +353,11 @@ fslsmooth <- function(
   if (retimg) {
     img = readnii(outfile, reorient = reorient, ...)
     return(img)
+  } else {
+    return(outfile)
   }   
   #   x = file.remove(paste0(mask.blur, ".nii"))
-  return(res)
+  # return(res)
 }
 
 #' @name fslmask
@@ -1024,7 +1026,7 @@ flirt = function(infile,
     message(paste0("Output matrix not specified, but stored ", 
                    "temporarily at ", omat, "\n"))
   }
-  return(res)
+  return(outfile)
 }
 
 

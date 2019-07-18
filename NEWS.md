@@ -1,3 +1,7 @@
+# fslr 2.23.0
+
+- Added `face_removal_mask` for removal of faces, based on `pydeface`.
+- Fixed `fslsmooth` to return an output file if `retimg = FALSE`.
 
 # fslr 2.22.0
 
