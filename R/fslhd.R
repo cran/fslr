@@ -375,10 +375,11 @@ fslsmooth <- function(
 #' @param verbose (logical) print out command before running
 #' @param ... additional arguments passed to \code{\link{readnii}}.
 #' @return Result from system command, depends if intern is TRUE or FALSE.
+#' @examples 
 #' if (have.fsl()){
 #' system.time({
-#' x = array(rnorm(1e6), dim = c(100, 100, 100))
-#' img = nifti(x, dim= c(100, 100, 100), 
+#' x = array(rnorm(1e5), dim = c(100, 100, 10))
+#' img = nifti(x, dim= c(100, 100, 10), 
 #' datatype = convert.datatype()$FLOAT32, cal.min = min(x), 
 #' cal.max = max(x), pixdim = rep(1, 4))
 #' mask = img > .5
@@ -541,7 +542,10 @@ fslhd <- function(file, opts="", verbose = TRUE, ...){
   if (verbose) {
     message(cmd, "\n")
   }
-  system(cmd, intern = TRUE)
+  hd = system(cmd, intern = TRUE)
+  # for FSL > 6.0
+  hd = sub("size of header", "sizeof_hdr", hd)
+  return(hd)
 }
 
 #' @title FSLhd help
@@ -563,13 +567,18 @@ fslhd.help = function(){
 #' @export
 #' @examples
 #' if (have.fsl()){
-#'  mnifile = file.path(fsldir(), "data", "standard", 
-#'    "MNI152_T1_2mm.nii.gz")
+#'  mnifile = mni_fname("2")
 #'  hd = fslhd(mnifile)
 #'  fslhd.parse(hd)
 #' }  
 fslhd.parse <- function(hd){
-  ss <- strsplit(hd, split = " ")
+  if (length(hd) == 1) {
+    if (file.exists(hd)) {
+      hd = fslhd(hd)
+    }
+  }
+  hd = sub("size of header", "sizeof_hdr", hd)
+  ss <- strsplit(hd, split = " |\t")
   ss <- lapply(ss, function(x) x[!x %in% ""])
   ss <- lapply(ss, function(x){
     if (grepl("_xyz", x[1])) 
@@ -604,8 +613,7 @@ fslhd.parse <- function(hd){
 #' @export
 #' @examples
 #' if (have.fsl()){
-#'  mnifile = file.path(fsldir(), "data", "standard", 
-#'    "MNI152_T1_2mm.nii.gz")
+#'  mnifile = mni_fname("2")
 #'  getForms(mnifile)
 #' }   
 getForms <- function(file, 
@@ -614,7 +622,7 @@ getForms <- function(file,
   file = checkimg(file, ...)  
   x <- fslhd(file, verbose = verbose)
   convmat <- function(form){
-    ss <- strsplit(form, " ")
+    ss <- strsplit(form, " |\t")
     ss <- t(sapply(ss, function(x) x[ x != "" ]))
     ss <- ss[, -1]
     class(ss) <- "numeric"
@@ -629,7 +637,7 @@ getForms <- function(file,
   qor <- x[grepl("qform_(x|y|z)orient", x)]
   
   short_orient <- function(orient){
-    ss <- strsplit(orient, " ")
+    ss <- strsplit(orient, " |\t")
     ss <- sapply(ss, function(x) x[ x != "" ])[2,]
     first <- substr(ss, 1,1)
     ss2 <- strsplit(ss, "-")
@@ -684,8 +692,7 @@ checkout <- function(hd){
 #' @examples
 #' library(fslr)
 #' if (have.fsl()){
-#'  mnifile = file.path(fsldir(), "data", "standard", 
-#'    "MNI152_T1_2mm.nii.gz")
+#'  mnifile = mni_fname("2")
 #'  check_file(mnifile)
 #' } 
 check_file <- function(file, ...){
@@ -1277,6 +1284,7 @@ fslorient.help = function(){
 #' Passed to \code{\link{readnii}}.
 #' @param intern (logical) to be passed to \code{\link{system}}
 #' @param verbose (logical) print out command before running
+#' @param opts additional options to pass to \code{\link{fslreorient2std}}
 #' @param ... additional arguments passed to \code{\link{readnii}}.
 #' @return If \code{retimg} then object of class nifti.  Otherwise,
 #' Result from system command, depends if intern is TRUE or FALSE.
@@ -1287,6 +1295,7 @@ fslreorient2std = function(
   reorient = FALSE,
   intern = FALSE, 
   verbose = TRUE,
+  opts = "",
   ...){
   
   res = fslcmd(func = "fslreorient2std", 
@@ -1295,12 +1304,38 @@ fslreorient2std = function(
                retimg = retimg,
                reorient = reorient,
                intern = intern,
-               opts = "",
+               opts = opts,
                verbose = verbose,
                ... = ..., 
                samefile = TRUE)
   
   return(res)  
+}
+
+#' @param matfile Output file for the matrix for reorientation
+#' @export 
+#' @rdname fslreorient2std
+fslreorient2std_mat = function(
+  file,
+  matfile = tempfile(fileext = ".mat"),
+  verbose = TRUE,
+  ...){
+  
+  if (file.exists(matfile)) {
+    file.remove(matfile)
+  }
+  rr = fslr::fslreorient2std(
+    file, 
+    no.outfile = TRUE, 
+    opts = paste0(" > ", matfile), 
+    verbose = verbose,
+    ...)
+  result = attr(rr, "result")
+  if (result != 0 | !file.exists(matfile)) {
+    warning("result from fslreorient2std_mat did not seem to work")
+  }
+  
+  return(matfile)  
 }
 
 #' @title fslreorient2std help

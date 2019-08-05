@@ -2,7 +2,7 @@ Package: fslr
 Type: Package
 Title: Wrapper Functions for 'FSL' ('FMRIB' Software Library) from
         Functional MRI of the Brain ('FMRIB')
-Version: 2.23.0
+Version: 2.24.1
 Authors@R: c(person(given = "John",
            family = "Muschelli",
            email = "muschellij2@gmail.com",
@@ -25,7 +25,7 @@ SystemRequirements: FSL
 RoxygenNote: 6.1.1
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2019-07-16 05:03:15 UTC; johnmuschelli
+Packaged: 2019-08-05 19:13:21 UTC; johnmuschelli
 Author: John Muschelli [aut, cre] (<https://orcid.org/0000-0001-6469-1750>)
 Repository: CRAN
-Date/Publication: 2019-07-18 06:36:58 UTC
+Date/Publication: 2019-08-05 20:40:07 UTC
