@@ -4,8 +4,15 @@
 \alias{mid_sagittal_align}
 \title{Mid-Sagittal Plane Alignment}
 \usage{
-mid_sagittal_align(file, outfile = NULL, retimg = TRUE, opts = "",
-  verbose = TRUE)
+mid_sagittal_align(
+  file,
+  outfile = NULL,
+  retimg = TRUE,
+  opts = "",
+  translation = TRUE,
+  force_rpi = TRUE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{file}{(character) input filename or class nifti}
@@ -15,6 +22,12 @@ mid_sagittal_align(file, outfile = NULL, retimg = TRUE, opts = "",
 \item{retimg}{(logical) return image of class nifti}
 
 \item{opts}{(character) options passed to \code{\link{flirt}}}
+
+\item{translation}{(logical) should the translation parameters be
+preserved (TRUE) or set to zero (FALSE)}
+
+\item{force_rpi}{Should \code{\link{rpi_orient_file}} be
+run?}
 
 \item{verbose}{(logical) print diagnostic messages}
 }

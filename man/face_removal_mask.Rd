@@ -5,9 +5,15 @@
 \alias{deface_image}
 \title{Face Removal Mask}
 \usage{
-face_removal_mask(file, template = mni_fname(mm = "1"),
-  face_mask = mni_face_fname(mm = "1"), outfile = NULL,
-  cost = "mutualinfo", retimg = FALSE)
+face_removal_mask(
+  file,
+  template = mni_fname(mm = "1"),
+  face_mask = mni_face_fname(mm = "1"),
+  outfile = NULL,
+  dof = 12,
+  cost = "mutualinfo",
+  retimg = FALSE
+)
 
 deface_image(file, ...)
 }
@@ -24,7 +30,9 @@ Set to \code{NULL} (recommended) if want to use from
 \url{https://github.com/poldracklab/pydeface}. 
 Alternatively, use \code{\link{mni_face_fname}}.}
 
-\item{outfile}{Output}
+\item{outfile}{Output file name}
+
+\item{dof}{(numeric) degrees of freedom (default 6 - rigid body)}
 
 \item{cost}{Cost function passed to \code{flirt}}
 

@@ -8,6 +8,10 @@
 #' @param retimg (logical) return image of class nifti
 #' @param opts (character) options passed to \code{\link{flirt}}
 #' @param verbose (logical) print diagnostic messages
+#' @param translation (logical) should the translation parameters be
+#' preserved (TRUE) or set to zero (FALSE)
+#' @param force_rpi Should \code{\link{rpi_orient_file}} be
+#' run?
 #'
 #' @return Filename of output or nifti depending on \code{retimg}
 #' @export
@@ -16,12 +20,17 @@ mid_sagittal_align = function(
   outfile = NULL,
   retimg = TRUE,
   opts = "",
+  translation = TRUE,
+  force_rpi = TRUE,
   verbose = TRUE) {
   
   outfile = check_outfile(outfile = outfile, retimg = retimg)
-  rp = rpi_orient_file(file, verbose = verbose)
-  
-  img = rp$img
+  if (force_rpi) {
+    rp = rpi_orient_file(file, verbose = verbose)
+    img = rp$img
+  } else {
+    img = checkimg(file)
+  }
   
   flip_lr = function(x){
     fsl_swapdim(file = x, a = "-x")
@@ -43,6 +52,9 @@ mid_sagittal_align = function(
   # parsed = parse_avscale(scaled)
   
   mat = parsed$fwd_half_transform
+  if (!translation) {
+    mat[, 4] = c(0, 0, 0, 1)
+  }
   # mat = mat * 0.5
   
   new_omat = tempfile(fileext = ".mat")
@@ -58,10 +70,14 @@ mid_sagittal_align = function(
     verbose = verbose,
     retimg = FALSE,
     outfile = tfile)
-  centered = reverse_rpi_orient_file(
-    file = tfile, 
-    orientation = rp$orientation,
-    convention = rp$convention)
+  if (force_rpi) {
+    centered = reverse_rpi_orient_file(
+      file = tfile, 
+      orientation = rp$orientation,
+      convention = rp$convention)
+  } else {
+    centered = tfile
+  }
   if (retimg) {
     centered = readnii(centered)
   }

@@ -4,8 +4,16 @@
 \alias{mcflirt}
 \title{FSL Motion Correction}
 \usage{
-mcflirt(file, outfile = NULL, retimg = TRUE, reorient = FALSE,
-  intern = FALSE, opts = "", verbose = TRUE, ...)
+mcflirt(
+  file,
+  outfile = NULL,
+  retimg = TRUE,
+  reorient = FALSE,
+  intern = FALSE,
+  opts = "",
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
 \item{file}{(character) image to be manipulated}
@@ -28,7 +36,7 @@ Passed to \code{\link{readnii}}.}
 }
 \value{
 If \code{retimg} then object of class nifti.  Otherwise,
-Result from system command, depends if intern is TRUE or FALSE.
+it will have additional attributes in the \code{additional_files} field.
 }
 \description{
 This function calls \code{mcflirt}

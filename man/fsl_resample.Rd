@@ -2,10 +2,17 @@
 % Please edit documentation in R/fsl_resample.R
 \name{fsl_resample}
 \alias{fsl_resample}
-\title{Title}
+\title{Resample an Image to Specific Voxel Size}
 \usage{
-fsl_resample(file, voxel_size, outfile = NULL, retimg = TRUE,
-  reorient = FALSE, verbose = TRUE)
+fsl_resample(
+  file,
+  voxel_size,
+  outfile = NULL,
+  retimg = TRUE,
+  reorient = FALSE,
+  opts = NULL,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{file}{Input file to resample}
@@ -19,6 +26,8 @@ fsl_resample(file, voxel_size, outfile = NULL, retimg = TRUE,
 \item{reorient}{(logical) If retimg, should file be reoriented when read in?
 Passed to \code{\link{readnii}}.}
 
+\item{opts}{options to pass to \code{flirt}}
+
 \item{verbose}{(logical) print out command before running}
 }
 \value{
@@ -26,7 +35,7 @@ If \code{retimg} then object of class nifti.  Otherwise,
 the output file.
 }
 \description{
-Title
+Resample an Image to Specific Voxel Size
 }
 \examples{
 if (have_fsl()) {

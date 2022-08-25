@@ -6,9 +6,16 @@
 \alias{fsl_applytopup}
 \title{applytopup - calling FSL applytopup}
 \usage{
-applytopup(infile, datain, index, topup_files, out = NULL,
-  method = c("lsr", "jac"), interp = c("spline", "trilinear"),
-  verbose = TRUE)
+applytopup(
+  infile,
+  datain,
+  index,
+  topup_files,
+  out = NULL,
+  method = c("lsr", "jac"),
+  interp = c("spline", "trilinear"),
+  verbose = TRUE
+)
 
 apply_topup(...)
 
@@ -19,7 +26,7 @@ fsl_applytopup(...)
 
 \item{datain}{name of text file with PE directions/times}
 
-\item{index}{list of indicies into --datain of 
+\item{index}{list of indices into --datain of 
 the input image (to be corrected)}
 
 \item{topup_files}{name of field/movements (from topup)}

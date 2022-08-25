@@ -31,6 +31,34 @@
 #' \item{\code{orientation}: }{Original image orientations}
 #' }
 #' @export
+#' @note `orient_rpi` and `orient_rpi_file` uses `RNifti` to ensure the 
+#' reading orientation
+#' @examples 
+#' lr_fname = system.file( "nifti", "mniLR.nii.gz", package = "oro.nifti")
+#' img = readnii(lr_fname)
+#' 
+#' rl_fname = system.file( "nifti", "mniRL.nii.gz", package = "oro.nifti")
+#' rl_img = readnii(rl_fname)
+#' stopifnot(all(rl_img[nrow(rl_img):1,,] == img))
+#' 
+#' \dontrun{
+#' if (have_fsl()) {
+#' 
+#' 
+#' reor = rpi_orient(rl_fname)
+#' rev = reverse_rpi_orient(reor$img, convention = reor$convention,
+#' orientation = reor$orientation)
+#' stopifnot(all(rev == rl_img))
+#' }
+#' }
+#' 
+#' 
+#' reor = orient_rpi(rl_fname)
+#' stopifnot(all(img == reor$img))
+#' 
+#' rev = reverse_orient_rpi(reor$img, convention = reor$convention,
+#' orientation = reor$orientation)
+#' stopifnot(all(rev == rl_img))
 rpi_orient = function(file, verbose = TRUE){
   L = rpi_orient_file(file = file, verbose = verbose)
   L$img = check_nifti(L$img)
@@ -40,6 +68,13 @@ rpi_orient = function(file, verbose = TRUE){
 #' @export
 #' @rdname rpi_orient
 rpi_orient_file = function(file, verbose = TRUE){
+  .Deprecated(
+    paste0("rpi_orient_file is going to be deprecated in the coming", 
+           " releases of fslr, and things this relies on, ", 
+           " including readrpi and rpi_orient.  Please use ",
+           "neurobase functions orient_rpi_file, orient_rpi, ", 
+           "and read_rpi in the future.")
+  )
   file = checkimg(file)
   L = .orient_file(file = file, verbose = verbose)
   file = L$file
@@ -52,12 +87,36 @@ rpi_orient_file = function(file, verbose = TRUE){
     tfile = file.path(tdir,
                       basename(file))
     file.copy(file, tfile, overwrite = TRUE)
+    
+    # orient3 = substr(sorient, 1, 1)
+    # if (any(orient3 == "L")) {
+    #   ind = which(orient3 == "L")
+    #   arglist = c(a = "x", b = "y", c = "z")
+    #   arglist[ind] = paste0("-", arglist[ind])
+    #   arglist = as.list(arglist)
+    #   arglist$file = file
+    #   arglist$retimg = FALSE
+    #   arglist$outfile = tfile
+    #   arglist$verbose = verbose
+    #   do.call(fslswapdim, args = arglist)
+    # }
+    
     # changes from NEUROLOGICAL to RADIOLOGICAL
     fslorient(tfile,
               opts = "-swaporient",
               retimg = FALSE,
               outfile = tfile,
               verbose = verbose)
+    ori2 = .orient_file(tfile, verbose = verbose)
+    if (all(ori2$orientation == c("RL", "PA", "IS"))) {
+      warning(
+        paste0(
+          "NEUROLOGICAL cases with RPI after swaporient",
+          " may not reorder the rows or oro.nifti.  Please use ",
+          "RNifti::orientation")
+      )
+    }
+    
     file = tfile
   }
   outfile = tempfile(fileext = ".nii.gz")
@@ -72,6 +131,7 @@ rpi_orient_file = function(file, verbose = TRUE){
            orientation = sorient)
   return(L)
 }
+
 
 #' @title Reverse Reorientation an Image to RPI orientation
 #' @description This function uses \code{fslswapdim} to reorient an image
@@ -119,9 +179,10 @@ reverse_rpi_orient_file = function(
              verbose = verbose,
              retimg = FALSE,
              outfile = outfile)
-
+  
   return(outfile)
 }
+
 
 #' @export
 #' @rdname rpi_orient

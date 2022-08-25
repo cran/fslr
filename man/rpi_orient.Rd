@@ -31,3 +31,34 @@ List of 3 elements
 \description{
 This function uses \code{fslswapdim} to reorient an image
 }
+\note{
+`orient_rpi` and `orient_rpi_file` uses `RNifti` to ensure the 
+reading orientation
+}
+\examples{
+lr_fname = system.file( "nifti", "mniLR.nii.gz", package = "oro.nifti")
+img = readnii(lr_fname)
+
+rl_fname = system.file( "nifti", "mniRL.nii.gz", package = "oro.nifti")
+rl_img = readnii(rl_fname)
+stopifnot(all(rl_img[nrow(rl_img):1,,] == img))
+
+\dontrun{
+if (have_fsl()) {
+
+
+reor = rpi_orient(rl_fname)
+rev = reverse_rpi_orient(reor$img, convention = reor$convention,
+orientation = reor$orientation)
+stopifnot(all(rev == rl_img))
+}
+}
+
+
+reor = orient_rpi(rl_fname)
+stopifnot(all(img == reor$img))
+
+rev = reverse_orient_rpi(reor$img, convention = reor$convention,
+orientation = reor$orientation)
+stopifnot(all(rev == rl_img))
+}
